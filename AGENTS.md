@@ -1,6 +1,6 @@
-# Claude Code Game Studios -- Game Studio Agent Architecture
+# Codex Game Studios -- Game Studio Agent Architecture
 
-Indie game development managed through 49 coordinated Claude Code subagents.
+Indie game development managed through 49 coordinated Codex subagents.
 Each agent owns a specific domain, enforcing separation of concerns and quality.
 
 ## Technology Stack
@@ -16,7 +16,7 @@ Each agent owns a specific domain, enforcing separation of concerns and quality.
 
 ## Project Structure
 
-@.claude/docs/directory-structure.md
+@.Codex/docs/directory-structure.md
 
 ## Engine Version Reference
 
@@ -24,11 +24,11 @@ Each agent owns a specific domain, enforcing separation of concerns and quality.
 
 ## Technical Preferences
 
-@.claude/docs/technical-preferences.md
+@.Codex/docs/technical-preferences.md
 
 ## Coordination Rules
 
-@.claude/docs/coordination-rules.md
+@.Codex/docs/coordination-rules.md
 
 ## Collaboration Protocol
 
@@ -47,8 +47,8 @@ See `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` for full protocol and examples.
 
 ## Coding Standards
 
-@.claude/docs/coding-standards.md
+@.Codex/docs/coding-standards.md
 
 ## Context Management
 
-@.claude/docs/context-management.md
+@.Codex/docs/context-management.md

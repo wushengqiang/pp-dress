@@ -1,0 +1,23 @@
+; PROTOTYPE - NOT FOR PRODUCTION
+; Question: Can Godot 4.6 validate the Resource Loader GDD assumptions for threaded texture loading, cache eviction, and memory estimates before production implementation?
+; Date: 2026-06-16
+
+config_version=5
+
+[application]
+
+config/name="Resource Loader Spike"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.6")
+config/icon=""
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=640
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+
