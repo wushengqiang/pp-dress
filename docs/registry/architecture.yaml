@@ -30,7 +30,7 @@
 #   Superseded entries:     Grep pattern="status: superseded"
 
 version: 1
-last_updated: ""
+last_updated: "2026-06-18"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -43,7 +43,140 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: game_state_current_state
+    status: active
+    owner_system: GameState
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    interface: "GameState.current_state read-only; write through GameState.request_transition(to_state, transition_context)"
+    write_access: GameState-only
+    referenced_by:
+      - docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: game_state_context
+    status: active
+    owner_system: GameState
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    interface: "GameState.context owned internally; consumers receive state_changed(..., context.duplicate(true))"
+    write_access: GameState-only
+    referenced_by:
+      - docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: save_data
+    status: active
+    owner_system: SaveManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "SaveManager.get_data_snapshot() returns defensive SaveData copies; writes go through limited SaveManager setters."
+    write_access: SaveManager-only storage ownership; field writes through owner-specific setter contracts
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: save_status
+    status: active
+    owner_system: SaveManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "SaveManager.last_load_status, last_save_status, storage_available read-only status fields."
+    write_access: SaveManager-only
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: default_overwrite_lock
+    status: active
+    owner_system: SaveManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "SaveManager.default_overwrite_locked; cleared only by SaveManager.acknowledge_default_overwrite()."
+    write_access: SaveManager-only
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: progress_current_day
+    status: active
+    owner_system: ProgressManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "ProgressManager.get_current_day(); persisted through SaveManager.set_current_day() by ProgressManager only."
+    write_access: ProgressManager-only
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: progress_highest_day_completed
+    status: active
+    owner_system: ProgressManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "ProgressManager.get_highest_day_completed(); persisted through SaveManager.mark_day_completed() by ProgressManager only."
+    write_access: ProgressManager-only
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: progress_unlock_cache
+    status: active
+    owner_system: ProgressManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "ProgressManager is_item/get_unlocked query API; persisted unlock_progress writes through SaveManager.record_unlocks() or replace_progress_fields()."
+    write_access: ProgressManager-only
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: texture_cache_hot_warm_entries
+    status: active
+    owner_system: TextureCache
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    interface: "TextureCache get_texture/get_texture_or_request APIs; HOT/WARM entries are internal and evicted through TextureCache LRU policy."
+    write_access: TextureCache-only
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: texture_pending_requests
+    status: active
+    owner_system: TextureCache
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    interface: "TextureCache owns pending request records and callback fan-out for duplicate texture requests."
+    write_access: TextureCache-only
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: texture_memory_estimate
+    status: active
+    owner_system: TextureCache
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    interface: "TextureCache.get_memory_estimate() reports project-held HOT/WARM texture memory estimate."
+    write_access: TextureCache-only
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - state: input_active_gesture
+    status: active
+    owner_system: InputManager
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    interface: "InputManager owns the single active mouse/touch gesture stream; consumers observe through drag_started/drag_updated/drag_ended/clicked/hovered data."
+    write_access: InputManager-only
+    referenced_by:
+      - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+    revised: ""
 
 # Example:
 #
@@ -71,7 +204,234 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: boot_readiness_checks
+    status: active
+    pattern: direct_call
+    producer: Foundation/Core Autoloads
+    consumers:
+      - GameState
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    interface: "Startup-gated Autoloads expose is_ready: bool and load_error: String; GameState checks them during deferred BOOT."
+    referenced_by:
+      - docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: scene_transition_readiness
+    status: active
+    pattern: direct_call
+    producer: Destination scene
+    consumers:
+      - GameState
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    method_signature: "GameState._on_scene_ready(scene_state: State) -> void"
+    referenced_by:
+      - docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: save_progress_field_writes
+    status: active
+    pattern: direct_call
+    producer: ProgressManager
+    consumers:
+      - SaveManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "ProgressManager is the only normal caller of SaveManager.set_current_day(), mark_day_completed(), record_unlocks(), and replace_progress_fields()."
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: goodnight_progress_commit
+    status: active
+    pattern: direct_call
+    producer: GameState
+    consumers:
+      - ProgressManager
+      - SaveManager
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    interface: "GOODNIGHT completion calls SaveManager.set_scene_in_progress(false), then ProgressManager.advance_day(), which calls SaveManager.save()."
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: progress_events_after_persistence
+    status: active
+    pattern: signal
+    producer: ProgressManager
+    consumers:
+      - GameState
+      - ClothingUnlock
+      - UI systems
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    signal_signature: "day_completed(day: int), items_unlocked(item_ids: Array[String]), day_started(day: int)"
+    interface: "ProgressManager emits progress signals only after SaveManager.save() succeeds."
+    referenced_by:
+      - docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: texture_request_callback
+    status: active
+    pattern: direct_call
+    producer: TextureCache
+    consumers:
+      - SpriteLayeredRenderer
+      - WardrobeUI
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    method_signature: "get_texture_or_request(item_id: String, resolution: int, callback: Callable) -> void"
+    interface: "HOT/WARM hits may invoke callback synchronously; failures, invalid requests, shared cancels, and evictions use callback(null)."
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: texture_shared_cancel
+    status: active
+    pattern: direct_call
+    producer: TextureCache
+    consumers:
+      - SpriteLayeredRenderer
+      - WardrobeUI
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    method_signature: "cancel_request(item_id: String, resolution: int) -> void"
+    interface: "Texture-level shared cancel notifies all waiters with callback(null); instance-level cancel must use local token/generation discard."
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: state_transition_request
+    status: active
+    pattern: direct_call
+    producer: UI and routable scenes
+    consumers:
+      - GameState
+    adr: docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    method_signature: "request_transition(to_state: State, transition_context: Dictionary = {}) -> bool"
+    interface: "All normal design-level state transitions must be requested through GameState; illegal, guarded-failed, or duplicate requests return false and emit no state_changed."
+    referenced_by:
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: state_transition_observation
+    status: active
+    pattern: signal
+    producer: GameState
+    consumers:
+      - Routable scenes
+      - UI systems
+      - Feature systems
+    adr: docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    signal_signature: "state_changed(from_state: State, to_state: State, context: Dictionary)"
+    interface: "GameState emits state_changed only after committed transitions; context must be context.duplicate(true), and consumers must treat it as read-only."
+    referenced_by:
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: registered_gesture_region_input
+    status: active
+    pattern: signal
+    producer: InputManager
+    consumers:
+      - WardrobeUI
+      - Future gameplay gesture UI owners
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    signal_signature: "drag_started(data: Dictionary), drag_updated(data: Dictionary), drag_ended(data: Dictionary), clicked(data: Dictionary), hovered(data: Dictionary), unhovered(data: Dictionary)"
+    interface: "InputManager emits identity-free gesture data only for registered gameplay gesture regions; unregistered GUI input remains on the Godot native Control path."
+    referenced_by:
+      - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: wardrobe_region_item_mapping
+    status: active
+    pattern: direct_call
+    producer: WardrobeUI
+    consumers:
+      - DragDressUp
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    interface: "WardrobeUI owns region_id -> item_id mapping and emits item_selected_for_equip(item_id) / item_drag_dropped(item_id, position); InputManager must not carry item_id."
+    referenced_by:
+      - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: presentation_gameplay_intent_result
+    status: active
+    pattern: signal
+    producer: Presentation/UI systems
+    consumers:
+      - Gameplay/domain systems
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    interface: "Presentation/UI emits typed player intent signals; gameplay/domain systems validate, perform or reject the operation, and emit typed result signals back before UI updates authoritative-looking state."
+    referenced_by:
+      - docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: wardrobe_outfit_apply_result
+    status: active
+    pattern: signal
+    producer: DragDressUp
+    consumers:
+      - WardrobeUI
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    signal_signature: "outfit_apply_result(item_id: String, accepted: bool, equipped_items: Array[String], reason: String)"
+    interface: "WardrobeUI updates equipped display state from DragDressUp's confirmed outfit_apply_result(...) result, not from emitted item_selected_for_equip/item_drag_dropped intents."
+    referenced_by:
+      - docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: progression_unlock_event
+    status: active
+    pattern: signal
+    producer: ProgressManager
+    consumers:
+      - ClothingUnlock
+    adr: docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    signal_signature: "items_unlocked(item_ids: Array[String])"
+    interface: "ProgressManager emits items_unlocked(...) only after successful persistence; it is the only authoritative unlock event for newly unlocked item IDs."
+    referenced_by:
+      - docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: clothing_unlock_confirmed_queue
+    status: active
+    pattern: direct_call
+    producer: ClothingUnlock
+    consumers:
+      - WardrobeUI
+    adr: docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    method_signature: "get_confirmed_unlock_queue() -> Array[String], consume_confirmed_unlock_queue() -> Array[String]"
+    interface: "ClothingUnlock owns the session-scoped confirmed unlock queue; WardrobeUI consumes queued IDs once for highlight state instead of reconstructing unlock deltas."
+    referenced_by:
+      - docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - contract: unlock_audio_feedback
+    status: active
+    pattern: direct_call
+    producer: ClothingUnlock
+    consumers:
+      - AudioManager
+    adr: docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    method_signature: "AudioManager.play_event(\"progress.items_unlocked\", context = {})"
+    interface: "Unlock audio feedback is requested only from ClothingUnlock after it receives a confirmed non-empty unlock batch."
+    referenced_by:
+      - docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    added: 2026-06-18
+    revised: ""
 
 # Example:
 #
@@ -100,7 +460,39 @@ interfaces: []
 # Register a budget when an ADR explicitly claims a frame time allocation.
 # The registry lets /architecture-review verify the total doesn't exceed the target.
 
-performance_budgets: []
+performance_budgets:
+  - system: GameState BOOT entry
+    status: active
+    budget_ms: 10
+    platform: Web
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    notes: "BOOT entry path must stay under 10ms, excluding WebAssembly compilation time."
+    referenced_by:
+      - docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    added: 2026-06-18
+    revised: ""
+
+  - system: GameState transition coordination
+    status: active
+    budget_ms: 1
+    platform: Web
+    adr: docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    notes: "Request validation, guard checks, context copy, and commit bookkeeping should stay under 1ms, excluding actual scene and resource loading."
+    referenced_by:
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - system: Presentation-to-gameplay intent handling
+    status: active
+    budget_ms: 0.5
+    platform: Web
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    notes: "Typed intent/result signal dispatch and small payload handling should stay under 0.5ms per player intent, excluding renderer texture loading."
+    referenced_by:
+      - docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+    revised: ""
 
 # Example:
 #
@@ -131,7 +523,62 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: scene_transition
+    status: active
+    api: "SceneTree.change_scene_to_file()"
+    confirmation: "Destination scene must call GameState._on_scene_ready(scene_state) before GameState emits state_changed."
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    reason: "Godot scene changes are timing-sensitive; state_changed must wait for destination scene readiness."
+    referenced_by:
+      - docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+      - docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+    revised: ""
+
+  - purpose: texture_async_loading
+    status: active
+    api: "ResourceLoader.load_threaded_request() + load_threaded_get_status() + load_threaded_get()"
+    confirmation: "Cold runtime texture loads use threaded loading with bounded polling; synchronous runtime PNG loading is not the fallback path."
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    reason: "Threaded loading was verified by the resource-loader spike and avoids frame-sensitive cold-load stalls."
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - purpose: texture_web_hosting
+    status: active
+    api: "HTTP/HTTPS served Godot Web export"
+    confirmation: "Texture loading Web smoke/prod validation must serve exported builds over HTTP/HTTPS; file:// is not a valid runtime path."
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    reason: "The resource-loader spike confirmed file:// fails before game startup because browsers block .pck fetches from origin null."
+    referenced_by:
+      - docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+    revised: ""
+
+  - purpose: standard_ui_input
+    status: active
+    api: "Godot native Control.gui_input() / Button.pressed / ScrollContainer paths"
+    confirmation: "Standard buttons, dialogue controls, main menu/goodnight controls, and normal scrolling must not route the same business action through InputManager.clicked."
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    reason: "Native GUI ownership prevents double-triggered UI actions and keeps ordinary Control behavior idiomatic in Godot 4.6."
+    referenced_by:
+      - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+    revised: ""
+
+  - purpose: active_drag_event_propagation
+    status: active
+    api: "Viewport.set_input_as_handled() via InputManager.mark_input_handled()"
+    confirmation: "Only active drag events call mark_input_handled(); this controls Godot event propagation but does not guarantee browser DOM default behavior suppression."
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    reason: "Active drag ownership needs a testable Godot propagation boundary while Web canvas default behavior remains a separate export-template validation concern."
+    referenced_by:
+      - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+    revised: ""
 
 # Example:
 #
@@ -157,7 +604,153 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_ready_mutual_calls
+    status: active
+    description: "Autoloads must not solve startup dependencies by mutually calling each other from _ready()."
+    why: "Mutual _ready() call chains make startup order fragile and can reintroduce same-frame dependency races."
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    added: 2026-06-18
+
+  - pattern: state_changed_before_scene_ready
+    status: active
+    description: "GameState must not emit state_changed immediately after change_scene_to_file(); destination scene readiness must be confirmed first."
+    why: "Destination scenes may not have completed minimal safe initialization immediately after a scene change request."
+    adr: docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md
+    added: 2026-06-18
+
+  - pattern: save_manager_interprets_progress_rules
+    status: active
+    description: "SaveManager must not clamp days, compute unlocks, repair progression semantics, or decide which day is playable."
+    why: "Persistence is a data pipe; progression rules belong to ProgressManager."
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+
+  - pattern: ui_direct_save_progress_write
+    status: active
+    description: "UI and feature systems must not directly call SaveManager progress-field setters."
+    why: "Direct writes bypass ProgressManager authority and can create stale unlock caches or unreviewed progress commits."
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+
+  - pattern: progress_signal_before_persistence
+    status: active
+    description: "ProgressManager must not emit day_completed, items_unlocked, or day_started before SaveManager.save() succeeds."
+    why: "Players must not see progress that was not safely persisted."
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+
+  - pattern: goodnight_failure_second_save
+    status: active
+    description: "GOODNIGHT save-failure handling must not immediately run a second SaveManager.save() after rollback."
+    why: "The previous successful save remains the recovery source; a second failed-path save can overwrite status or create misleading persisted state."
+    adr: docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md
+    added: 2026-06-18
+
+  - pattern: resource_loader_autoload_name
+    status: active
+    description: "The project must not register a Godot Autoload named ResourceLoader."
+    why: "That name shadows Godot's built-in ResourceLoader class and can make core loading APIs unavailable or ambiguous."
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+
+  - pattern: resource_loader_remove_resource_from_cache
+    status: active
+    description: "Runtime code must not call ResourceLoader.remove_resource_from_cache()."
+    why: "The resource-loader spike verified this GDScript API does not exist in Godot 4.6; texture lifecycle uses project-held reference release and cache modes instead."
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+
+  - pattern: per_frame_sync_texture_load_fallback
+    status: active
+    description: "Runtime cold texture fallback must not use per-frame synchronous ResourceLoader.load() for PNG/FULL texture paths."
+    why: "Synchronous cold loads can stall wardrobe and outfit frames; approved fallbacks reduce memory pressure or cache counts instead."
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+
+  - pattern: instance_level_shared_texture_cancel
+    status: active
+    description: "A single Character/UI instance must not call TextureCache.cancel_request() merely because that instance no longer needs the texture."
+    why: "cancel_request() is a shared texture-level cancel and notifies all waiters; instance lifecycle cancellation must use local token/generation discard."
+    adr: docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md
+    added: 2026-06-18
+
+  - pattern: direct_scene_change_outside_gamestate
+    status: active
+    description: "UI, feature systems, and routable scenes must not call SceneTree.change_scene_to_file() directly for global game-state transitions."
+    why: "Direct scene changes bypass GameState's transition table, readiness handshake, context ownership, timeout, and GOODNIGHT persistence guards."
+    adr: docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+
+  - pattern: success_state_emit_without_committed_transition
+    status: active
+    description: "GameState must not emit success state_changed signals for illegal requests, transition timeouts, mismatched scene readiness callbacks, or failed GOODNIGHT commits."
+    why: "Downstream scenes and UI rely on state_changed as proof that the transition is committed and safe to observe."
+    adr: docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md
+    added: 2026-06-18
+
+  - pattern: global_inputmanager_gui_click_capture
+    status: active
+    description: "InputManager must not globally interpret every press/touch as a gameplay click or drag candidate."
+    why: "Global capture can double-trigger standard Godot GUI actions and make ScrollContainer/button behavior fight registered gameplay gestures."
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+
+  - pattern: inputmanager_carries_gameplay_identity
+    status: active
+    description: "InputManager gesture dictionaries must not contain item_id, Node, Control, Resource, wardrobe item dictionaries, or clothing references."
+    why: "The input layer owns gesture streams only; gameplay identity belongs to UI owners such as WardrobeUI."
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+
+  - pattern: single_visual_focus_state_for_hover_and_keyboard_focus
+    status: active
+    description: "UI Controls must not collapse mouse/touch hover and keyboard/gamepad focus into one visual state."
+    why: "Godot 4.6 separates mouse/touch focus from keyboard/gamepad focus, and both can be visible on different Controls at the same time."
+    adr: docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
+    added: 2026-06-18
+
+  - pattern: ui_optimistic_authoritative_state_update
+    status: active
+    description: "Presentation/UI must not update authoritative-looking gameplay state, such as equipped outfit display state, before receiving the confirmed gameplay result signal."
+    why: "Speculative UI state can show outfits, progress, or transitions that gameplay, persistence, or renderer authority has not confirmed."
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+
+  - pattern: gameplay_reads_ui_presentation_state
+    status: active
+    description: "Gameplay/domain systems must not read UI-only fields such as selected_item_id, hover state, card visuals, or drag preview state."
+    why: "Gameplay must receive required player intent through typed payloads so presentation internals can change without breaking gameplay authority."
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+
+  - pattern: mvp_global_event_bus_for_ui_gameplay
+    status: active
+    description: "MVP presentation-to-gameplay communication must not use a global event bus as the default routing mechanism."
+    why: "A global event bus hides ownership and event ordering before the MVP has a concrete need for that infrastructure."
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+
+  - pattern: duplicate_native_gui_and_gameplay_signal_action
+    status: active
+    description: "A single business action must not be bound both to a native Godot GUI signal and to a custom gameplay intent signal."
+    why: "Duplicate bindings can fire the same player action twice, especially when standard Control paths and gameplay gesture paths overlap."
+    adr: docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
+    added: 2026-06-18
+
+  - pattern: ui_reconstructs_unlock_delta
+    status: active
+    description: "WardrobeUI, ClothingUnlock, and other presentation systems must not compare progression or wardrobe data to infer newly unlocked item IDs."
+    why: "Unlock deltas are authoritative only when emitted by ProgressManager after persistence succeeds; UI-side reconstruction can duplicate, replay, or desynchronize unlock feedback."
+    adr: docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    added: 2026-06-18
+
+  - pattern: unlock_audio_without_confirmed_batch
+    status: active
+    description: "Audio feedback for progress.items_unlocked must not be requested unless ClothingUnlock has received a confirmed non-empty unlock batch."
+    why: "Audio should follow committed unlock presentation only, not speculative progression polling or empty unlock days."
+    adr: docs/architecture/adr-0008-progression-and-unlock-event-contract.md
+    added: 2026-06-18
 
 # Example:
 #

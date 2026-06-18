@@ -397,14 +397,16 @@ web_remove_item(key):
 - **设计决策**：SaveManager 做基础结构校验，不做深度业务校验。它保证“读出的数据结构可被下游安全消费”，但不判断进度是否合法
 - **安全边界**：localStorage 是不可信输入。篡改进度不需要防作弊，但所有消费方必须防崩溃：GameState 不得在 ProgressManager 修复前用原始 `current_day` 加载场景；每日场景/渲染层不得假设 `equipped_items` 中的 ID 一定存在；`unlock_progress` 不得作为衣橱可用性或装备许可来源
 
-### EC-5: 场景恢复时穿搭数据为空
+### EC-5: 场景恢复时穿搭数据缺失或为空
 
-**场景**：`scene_in_progress = true` 但 `equipped_items = []`（理论上不应出现，但可能因历史 bug 或手动篡改产生）。
+**场景**：`scene_in_progress = true`，但 `equipped_items` 字段缺失、为 `null`、不是数组，或为显式空数组 `[]`。
 
 **行为**：
 - SaveManager 不处理此逻辑——它只负责存取数据
-- 由 GameState 在 BOOT 阶段等待 ProgressManager 修复完成后检查：若 `scene_in_progress == true` 但 `equipped_items` 为空，或经过 WardrobeDatabase/ProgressManager 过滤后无有效装备，视为异常状态，重置为 `scene_in_progress = false`，从 MAIN_MENU 正常开始
-- 此逻辑详见 `design/gdd/scene-state-management.md` 的 Edge Cases 部分
+- 由 GameState 在 BOOT 阶段等待 ProgressManager 修复完成后检查：若 `equipped_items` 字段缺失、为 `null`、不是数组，或包含无法归一化为 `String` 的值，则视为不可恢复状态，重置为 `scene_in_progress = false`，从 MAIN_MENU 正常开始
+- 若 `equipped_items == []`，则保留为玩家明确确认的空穿搭语义，允许恢复到 DAILY_SCENE，并由 Daily Scene 调用 `apply_outfit([])`；不得改为默认穿搭，也不得仅因数组为空而清除恢复标记
+- 若数组中的 ID 经过 WardrobeDatabase/ProgressManager 过滤后变为空，但原始字段类型有效，GameState 可按明确空穿搭恢复；具体无效 ID 应记录 warning，而不是破坏玩家的会话恢复
+- 此逻辑详见 `design/gdd/scene-state-management.md` 的 Edge Cases 部分和 `docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md`
 
 ### EC-6: 新游戏/重置流程
 
@@ -644,7 +646,7 @@ N/A — SaveManager 没有 UI 界面。存档状态的 UI 展示（如"保存中
 - [ ] **AC-I2**: GameState 和 ProgressManager 访问 SaveManager 时使用 `is_ready` 双路径
 - [ ] **AC-I3**: WARDROBE 确认时 GameState 不调用 `SaveManager.set_current_day()`
 - [ ] **AC-I4**: BOOT 恢复 DAILY_SCENE 前等待 ProgressManager 修复完成，并使用修复后的 `ProgressManager.get_current_day()`
-- [ ] **AC-I5**: `scene_in_progress == true` 但过滤后 `equipped_items` 为空时，GameState 清除恢复标记、调用 `SaveManager.save()` 持久化修复，并进入 MAIN_MENU
+- [ ] **AC-I5**: `scene_in_progress == true` 且 `equipped_items` 字段缺失、为 `null`、不是数组或包含无法归一化为 `String` 的值时，GameState 清除恢复标记、调用 `SaveManager.save()` 持久化修复，并进入 MAIN_MENU；若 `equipped_items == []` 或有效数组过滤后为空，则保留为空穿搭恢复语义并进入 DAILY_SCENE
 - [ ] **AC-I6**: GOODNIGHT → MAIN_MENU 时先 `set_scene_in_progress(false)`，再调用 `ProgressManager.advance_day()`；只有 `advance_day() == true` 才允许进入 MAIN_MENU
 - [ ] **AC-I7**: `ProgressManager.advance_day() == true` 且 MAIN_MENU 已进入后立即刷新，不恢复已完成 DAILY_SCENE
 - [ ] **AC-I8**: `current_day = 99, highest_day_completed = 0` 经 ProgressManager 修复后，不进入 day 7，不全量解锁

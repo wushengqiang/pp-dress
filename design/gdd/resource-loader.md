@@ -2,7 +2,7 @@
 
 > **Status**: Approved
 > **Author**: user + Claude Code Game Studios
-> **Last Updated**: 2026-06-05
+> **Last Updated**: 2026-06-18
 > **Implements Pillar**: 即时有感
 
 > **Quick reference** — Layer: `Core Infrastructure` · Priority: `MVP` · Key deps: `WardrobeDatabase`, `SceneStateManagement`
@@ -72,14 +72,14 @@
 暖缓存 (Warm): Dictionary[String, Texture2D]
               └── 自维护二级缓存——LRU 淘汰从 Hot 移入 Warm，不释放纹理
               └── 上限：MAX_WARM_FULL 张 FULL 纹理（默认 4）
-              └── Warm 满时淘汰最旧的 Warm 条目：调用 `remove_resource_from_cache(path)` 释放引擎缓存，再将本系统引用置 null
+              └── Warm 满时淘汰最旧的 Warm 条目：移除本系统引用并允许 Godot 引用计数释放；不得调用不存在的 `remove_resource_from_cache()`
               └── 获取时从 Warm 取出并提升到 Hot（<5ms）
 
 冷 (Cold):    两个缓存层均未命中
               └── 需完整 I/O + PNG 解码管线（<16ms 单张 FULL）
 ```
 
-> **设计决策**：暖缓存由本系统自维护（`_warm_cache: Dictionary`），不依赖 Godot ResourceLoader 内部缓存行为。**关键发现**：Godot 4.x 中 `ResourceLoader.load()` **和** `load_threaded_get()` 均将资源放入引擎级 `ResourceCache`（强引用缓存）。仅将本系统 Dictionary 引用置 null **不会**释放 GPU 纹理——引擎缓存仍持有引用。因此 LRU 淘汰路径在释放 Warm 条目时必须额外调用 `ResourceLoader.remove_resource_from_cache(path)` 才能真正释放纹理。`/prototype` 阶段需验证 Godot 4.6 Web 导出中 `remove_resource_from_cache()` 的可用性
+> **设计决策**：暖缓存由本系统自维护（`_warm_cache: Dictionary`），不依赖 Godot ResourceLoader 内部缓存行为。`/prototype resource-loader` 已验证：Godot 4.6.3 的 native/editor 与 Web-over-HTTP 环境中，`ResourceLoader.load_threaded_request()` 可用并通过本系统的去重、HOT/WARM、evict 原型测试；但 Godot 4.6 GDScript **不存在** `ResourceLoader.remove_resource_from_cache()`。因此生产实现不得依赖显式移除引擎级缓存；应通过 `ResourceLoader` 的 `cache_mode` 参数避免不必要的引擎缓存，并通过清理 `_hot_cache` / `_warm_cache` / `_pending_requests` 中的本系统强引用来释放纹理生命周期。
 
 **内存管理——LRU 淘汰**：
 
@@ -101,7 +101,7 @@
 | `preload_category_thumbnails(category)` | String | void | 预加载指定类目全部物品的 THUMB 纹理 |
 | `preload_day_thumbnails(day)` | int | void | 预加载指定天数解锁的全部物品的 THUMB 纹理 |
 | `is_cached(item_id, resolution)` | String, int | bool | 纹理是否在热缓存或暖缓存中。**LOADING 状态的纹理返回 false**——纹理尚未就绪，不可用于渲染 |
-| `evict_full_textures()` | — | void | 清空所有 FULL 热缓存和暖缓存条目（场景切换时调用）。对每个条目调用 `remove_resource_from_cache(path)` 释放引擎缓存，再置 null 本系统引用。**同时清理 `_pending_requests` 中所有 FULL 请求记录**——防止废弃请求导致后续重请求死锁（见 Edge Case #21） |
+| `evict_full_textures()` | — | void | 清空所有 FULL 热缓存和暖缓存条目（场景切换时调用），移除本系统持有的 `Texture2D` 引用。Godot 4.6 不提供 `remove_resource_from_cache()`，因此不得调用该 API。**同时清理 `_pending_requests` 中所有 FULL 请求记录**——防止废弃请求导致后续重请求死锁（见 Edge Case #21） |
 | `cancel_request(item_id, resolution)` | String, int | void | 取消指定纹理的进行中异步请求。若请求已完成则无操作。**取消时通知所有等待方 callback(null)**，防止调用方永久挂起 |
 | `get_memory_estimate()` | — | int | 热缓存 + 暖缓存中所有纹理的估计内存占用（bytes）
 
@@ -258,7 +258,7 @@ last_access = Time.get_ticks_msec()
 1. 扫描所有 `resolution == FULL` 的热缓存条目
 2. 找到 `last_access` 最小的条目（最久未访问；若有平局则选任意一个——同一帧内加载的多张纹理可能时间戳相同）
 3. 将其从 `_hot_cache` 移除，移入 `_warm_cache`
-4. 若 `_warm_cache.size() >= MAX_WARM_FULL`，淘汰 Warm 中最旧的条目——调用 `ResourceLoader.remove_resource_from_cache(path)` 释放引擎缓存，再将本系统引用置 null
+4. 若 `_warm_cache.size() >= MAX_WARM_FULL`，淘汰 Warm 中最旧的条目——从 `_warm_cache` 移除该条目并将本系统引用置 null。Godot 4.6 不提供 `ResourceLoader.remove_resource_from_cache()`，实现不得调用该不存在 API；加载时应优先使用合适的 `cache_mode` 降低引擎级缓存驻留风险
 5. 插入新纹理到 `_hot_cache`，设置 `last_access = Time.get_ticks_msec()`
 
 每次 `get_texture()` 命中时更新该条目的 `last_access`。
@@ -293,7 +293,7 @@ max_poll_iterations = min(5, pending_request_count)
 | 2 | `WardrobeDatabase.is_ready == false` 时 `TextureCache._ready()` 执行 | 打印 `push_error()`，`is_ready = false`，`load_error` 记录 "Database not ready"。不执行 Tier 1 | Autoload 顺序保证不应出现此情况——若出现则说明注册顺序配置错误 |
 | 3 | `request_texture()` 在 `is_ready == false` 时被调用 | 打印 `push_warning()`，调用被忽略。下游系统应在调用前检查 `is_ready` | 未就绪加载器不应静默接受请求 |
 | 4 | `get_texture()` 在 `is_ready == false` 时被调用 | 返回 null。不打印警告——这是开发阶段场景未初始化的正常情况 | 静默返回 null 让下游系统自行处理 |
-| 5 | 热缓存已满 + LRU 淘汰的纹理正被 Sprite2D 节点引用 | 纹理从 `_hot_cache` 移入 `_warm_cache`，不影响 Sprite2D 已持有的引用——Godot 引用计数保持纹理存活。下次 `get_texture()` 时从 `_warm_cache` 恢复（<5ms）。若 `_warm_cache` 满且该纹理被再次淘汰（Warm → COLD），调用 `remove_resource_from_cache(path)` 移除引擎缓存后本系统引用置 null——但 Sprite2D 持有的引用仍保持纹理存活直到节点释放。下次 `get_texture()` 需重新从磁盘加载 | LRU 热淘汰只移动缓存层；Warm 淘汰调用 `remove_resource_from_cache()` + 释引用。引擎硬引用移除后纹理生命周期仅由 Sprite2D 节点引用计数维持 |
+| 5 | 热缓存已满 + LRU 淘汰的纹理正被 Sprite2D 节点引用 | 纹理从 `_hot_cache` 移入 `_warm_cache`，不影响 Sprite2D 已持有的引用——Godot 引用计数保持纹理存活。下次 `get_texture()` 时从 `_warm_cache` 恢复（<5ms）。若 `_warm_cache` 满且该纹理被再次淘汰（Warm → COLD），仅移除本系统引用并让 Godot 引用计数自然回收；实现不得假设存在显式引擎缓存移除 API。下次 `get_texture()` 需重新从磁盘加载 | LRU 热淘汰只移动缓存层；Warm 淘汰只释放本系统引用。纹理生命周期由引擎引用计数与项目引用共同决定 |
 | 6 | 同一纹理在 LOADING 状态被再次 `request_texture()` | 检测到已有进行中请求，跳过重复的 `load_threaded_request()`。新调用方加入等待列表，就绪后一起通知 | 防止同一文件多个并行加载 |
 | 7 | 同一纹理在 LOADING 状态被 `get_texture()` | 返回 null——调用方应连接 `texture_loaded` 信号等待通知 | 同步获取不阻塞等待异步结果 |
 | 8 | `preload_outfit()` 收到空数组 `[]` | 静默返回，不触发任何加载 | 空输入是合法情况（e.g.，初始空穿搭） |
@@ -301,14 +301,14 @@ max_poll_iterations = min(5, pending_request_count)
 | 10 | `item_id` 在 wardrobe.json 中不存在 | `WardrobeDatabase.get_item_by_id()` 返回 null → `get_texture()` 返回 null。不尝试加载不存在的路径 | 无效 id 由数据库层判定 |
 | 11 | `_process()` 中轮询耗时超过 2ms 预算 | 每帧轮询前记录开始时间，超 2ms 立即 `return`，剩余请求推迟到下一帧 | 硬性帧预算约束 |
 | 12 | 场景切换时仍有进行中异步加载 | `evict_full_textures()` 调用时：(1) 将进行中的 Tier 2 请求标记为"废弃"；(2) 从 `_pending_requests` 中移除所有 FULL 请求记录（释放去重锁）；(3) 通知所有等待方 callback(null)；(4) 清空 Tier 3 队列。`_process()` 检测到废弃标记时不发信号、不写热缓存 | 旧场景纹理不需要触发新场景的 UI 更新。清理 `_pending_requests` 防止后续重请求被去重逻辑跳过导致死锁（见 #21） |
-| 13 | 全部 FULL 纹理加载后的内存占用量 | HOT 上限 `MAX_HOT_FULL=8`（~67MB）+ WARM 上限 `MAX_WARM_FULL=4`（~33.5MB）+ 缩略图 30 张（~0.36MB）+ WASM 运行时基线（~100-140MB，建议使用 120MB 作为默认估算）+ 音频/UI/其他（~10-30MB）≈ **低估算 231MB / 高估算 271MB**。**注意**：NPOT 高度 1536 在某些 WebGL 实现中可能向上对齐至 2048（+78% GPU 内存），极端对齐场景下约 257-307MB。**必须在 `/prototype` 阶段实测验证——若超 250MB 则降低 `MAX_HOT_FULL` 至 6 和/或启用 Basis Universal 压缩**（压缩后 FULL 纹理 ~1MB/张 含 mipmap，12 张仅 ~12MB） | 默认值 `8+4=12` 张 FULL 纹理涵盖"当前穿搭 + 最近浏览 + 预测"模式。WARM 满后最旧条目通过 `remove_resource_from_cache()` 真正释放。实际 GPU 内存需 `/prototype` 实测——NPOT 对齐和 GPU 纹理格式差异可能导致系统性偏差 |
+| 13 | 全部 FULL 纹理加载后的内存占用量 | HOT 上限 `MAX_HOT_FULL=8`（~67MB）+ WARM 上限 `MAX_WARM_FULL=4`（~33.5MB）+ 缩略图 30 张（~0.36MB）+ WASM 运行时基线（~100-140MB，建议使用 120MB 作为默认估算）+ 音频/UI/其他（~10-30MB）≈ **低估算 231MB / 高估算 271MB**。**注意**：NPOT 高度 1536 在某些 WebGL 实现中可能向上对齐至 2048（+78% GPU 内存），极端对齐场景下约 257-307MB。**必须在 `/prototype` 阶段实测验证——若超 250MB 则降低 `MAX_HOT_FULL` 至 6 和/或启用 Basis Universal 压缩**（压缩后 FULL 纹理 ~1MB/张 含 mipmap，12 张仅 ~12MB） | 默认值 `8+4=12` 张 FULL 纹理涵盖"当前穿搭 + 最近浏览 + 预测"模式。WARM 满后最旧条目通过移除本系统引用释放；实际 GPU 内存需 `/prototype` 实测——NPOT 对齐和 GPU 纹理格式差异可能导致系统性偏差 |
 | 14 | Web 端 `.pck` 尚未完全下载时访问 `res://` | 不存在此竞态——Godot Web 导出在 `.pck` 完全下载后才启动游戏和 Autoload | Godot Web 导出生命周期保证 |
 | 15 | 纹理尺寸与预期不符 | 不校验尺寸——由美术资产管线保证。若异常导致渲染变形，由精灵分层渲染系统处理 | 尺寸校验不是加载器职责 |
 | 16 | `get_memory_estimate()` 在热缓存为空时调用 | 返回 0 | 空缓存是合法状态 |
 | 17 | Tier 1 中有个别纹理加载失败 | 失败路径追加到 `load_error`，继续加载其余纹理。`is_ready` 仍设为 true | 一个纹理缺失不应阻止启动 |
-| 18 | Godot 4.6 Web 端 `load_threaded_request()` 实际不创建后台线程 | **已知风险（见 Open Questions #1）**。若验证发现线程不可用，备选方案：(A) 使用 Basis Universal GPU 压缩导入（单张 FULL 6MB→0.8MB，允许更大的热缓存）并提高 `MAX_HOT_FULL` 至 20-25 补偿异步缺失；(B) 降低 FULL 分辨率至 512×768（单张 ~1.6MB）；(C) 预加载全部 30 张 FULL 到热缓存（~188MB 未压缩 / ~24MB Basis 压缩）。**不推荐**分帧同步 `load()`——`ResourceLoader.load()` 是原子阻塞操作，单张 FULL 的 PNG 解码在主线程耗时 50-200ms，每帧 1 次会导致持续卡顿 | 同步 load() 回退对 FULL 纹理不可行。API 契约不变的前提是线程可用或使用 GPU 压缩 |
-| 19 | `evict_full_textures()` 后立即调用 `get_texture()` | `evict_full_textures()` 清空热缓存和暖缓存——对每个 FULL 条目调用 `remove_resource_from_cache(path)` 后纹理引用置 null。`get_texture()` 返回 null（COLD 状态）。需重新调用 `request_texture()` 或 `get_texture_or_request()` 加载 | 场景切换时完全清空 FULL 缓存（含引擎缓存），旧场景纹理不应在新场景中恢复 |
-| 20 | `MAX_HOT_FULL` 或 `MAX_WARM_FULL` 被设为不合理值 | setter 使用 `clamp(value, 1, 20)` 保护 `MAX_HOT_FULL`，`clamp(value, 0, 10)` 保护 `MAX_WARM_FULL`。`_ready()` 中加 assert(`MAX_HOT_FULL + MAX_WARM_FULL <= 25`) | `MAX_HOT_FULL=20, MAX_WARM_FULL=10` 极限组合 ≈252MB GPU 内存（仅 FULL 纹理）— 加上 WASM 基线已远超 256MB。assert 提供额外安全网。`MAX_WARM_FULL = 0` 合法——禁用暖缓存，淘汰调用 `remove_resource_from_cache()` 后置 null |
+| 18 | Godot 4.6 Web 端 `load_threaded_request()` 实际不创建后台线程 | `/prototype resource-loader` 已在 Godot 4.6.3 native/editor 与 Web-over-HTTP 中输出 `SPIKE RESULT: PASS`，验证线程加载路径、重复请求去重、HOT/WARM 流转与 evict 原型均可运行。若后续目标托管环境出现线程/COOP/COEP 差异，备选方案仍为：(A) Basis Universal GPU 压缩导入；(B) 降低 FULL 分辨率；(C) 预加载全部 30 张 FULL 到热缓存。**不推荐**分帧同步 `load()` | P0 线程加载风险已通过 spike 降级为部署验证项；生产仍需通过 Web HTTP/HTTPS 服务运行，不能用 `file://` 验证 |
+| 19 | `evict_full_textures()` 后立即调用 `get_texture()` | `evict_full_textures()` 清空热缓存和暖缓存——对每个 FULL 条目移除本系统引用并清理 pending 请求。`get_texture()` 返回 null（COLD 状态）。需重新调用 `request_texture()` 或 `get_texture_or_request()` 加载 | 场景切换时完全清空 FULL 缓存（含本系统引用），旧场景纹理不应在新场景中恢复 |
+| 20 | `MAX_HOT_FULL` 或 `MAX_WARM_FULL` 被设为不合理值 | setter 使用 `clamp(value, 1, 20)` 保护 `MAX_HOT_FULL`，`clamp(value, 0, 10)` 保护 `MAX_WARM_FULL`。`_ready()` 中加 assert(`MAX_HOT_FULL + MAX_WARM_FULL <= 25`) | `MAX_HOT_FULL=20, MAX_WARM_FULL=10` 极限组合 ≈252MB GPU 内存（仅 FULL 纹理）— 加上 WASM 基线已远超 256MB。assert 提供额外安全网。`MAX_WARM_FULL = 0` 合法——禁用暖缓存，淘汰仅移除本系统引用 |
 | 21 | `evict_full_textures()` 后新场景立即 `request_texture()` 同一纹理 | `evict_full_textures()` 已从 `_pending_requests` 中清理了旧请求记录（见 #12）。新 `request_texture()` 检测不到冲突的 pending 请求 → 正常发起新的 `load_threaded_request()`。旧请求完成时因废弃标记被忽略。**注意**：若未清理 `_pending_requests`，新请求会被去重逻辑跳过而永久挂起 | 废弃请求的去重锁必须随 evict 一同释放，否则造成静默死锁 |
 | 22 | `is_cached()` 对 LOADING 状态的纹理被调用 | 返回 false。纹理在加载完成前不可用于渲染，调用方应通过 `get_texture_or_request()` 的 callback 或 `texture_loaded` 信号获取通知 | LOADING 状态既不在 Hot 也不在 Warm——`is_cached()` 的语义是"纹理是否可立即获取"。LOADING 纹理不满足此条件 |
 
@@ -461,7 +461,7 @@ max_poll_iterations = min(5, pending_request_count)
 
 **线程不可用回退**（Open Question #1 / Edge Case #18）
 
-- [ ] AC-48：当 `/prototype` 验证发现目标平台 `load_threaded_request()` 不可用（无真实后台线程）时，系统回退到策略 (A) Basis Universal 压缩 + 增大热缓存 或 (B) 降低 FULL 分辨率，不崩溃，`is_ready` 仍可达 true。此 AC 在 `/prototype` 阶段前保持 OPEN 状态
+- [ ] AC-48：`/prototype resource-loader` 已验证 Godot 4.6.3 native/editor 与 Web-over-HTTP 中 `load_threaded_request()` 路径可用。生产实现仍必须保留部署级 fallback：若目标 Web 托管环境因 COOP/COEP、导出模板或浏览器限制导致线程加载失败，系统回退到策略 (A) Basis Universal 压缩 + 增大热缓存 或 (B) 降低 FULL 分辨率，不崩溃，`is_ready` 仍可达 true
 
 **回调竞态保护**
 
@@ -492,7 +492,8 @@ max_poll_iterations = min(5, pending_request_count)
 
 | 问题 | 负责人 | 截止 | 决议 |
 |------|--------|------|------|
-| **【P0 阻塞】** Godot 4.6 Web 导出中 `ResourceLoader.load_threaded_request()` 是否在独立线程执行？需要 (1) 服务端配置 COOP/COEP headers，(2) 使用 threads-enabled 导出模板。若不可用：备选方案为 (A) Basis Universal GPU 压缩 + 增大热缓存，(B) 降低 FULL 分辨率，(C) 预加载全部纹理。**不推荐**分帧同步 load()——阻塞式 PNG 解码会导致每帧 50-200ms 卡顿。**附加验证门**：`/prototype` 中实测总内存占用（含 mipmap 开销）——若超过 250MB，必须在 MVP 实现前降低 `MAX_HOT_FULL` 至 8 和/或启用 Basis Universal 压缩 | 技术总监 | `/prototype` 阶段 | **P0 阻塞——实现前必须验证**。若线程不可用，Tier 2/3 异步架构需重新设计。若内存超限，缓存上限需收紧 |
+| Godot 4.6 Web 导出中 `ResourceLoader.load_threaded_request()` 是否可用于本系统线程加载路径？ | 技术总监 | 已完成：`/prototype resource-loader` 2026-06-18 | **已验证通过**。Godot 4.6.3 native/editor 与 Web-over-HTTP 均输出 `SPIKE RESULT: PASS`。注意：Web 导出不能通过 `file://` 直接打开，必须通过 HTTP/HTTPS 服务运行；正式托管仍需配置并验证 COOP/COEP 与导出模板 |
+| Godot 4.6 是否提供 `ResourceLoader.remove_resource_from_cache()` 供本系统显式移除引擎级缓存？ | 技术总监 | 已完成：`/prototype resource-loader` 2026-06-18 | **不存在该 GDScript API**。生产实现不得调用它；改用 `cache_mode` 控制加载缓存策略，并通过释放 `_hot_cache` / `_warm_cache` / `_pending_requests` 中的本系统强引用完成生命周期管理 |
 | 是否启用 Basis Universal GPU 纹理压缩导入？FULL 纹理 6.29MB/张 → ~0.8MB/张，10 张从 63MB→8MB。这是单次决策中影响最大的内存优化 | 技术总监 | 资产管线启动前 | 强烈建议在 MVP 阶段启用。与线程可用性联动——若线程不可用，压缩是降低预加载内存压力的关键 |
 | 占位纹理（placeholder）的视觉设计——应显示纯色方块、灰色轮廓、还是游戏 logo 水印？ | 美术总监 | 资产管线启动前 | 占位纹理在开发阶段和纹理加载失败时可见。视觉方向应匹配"温暖手绘风"。建议使用半透明角色轮廓而非纯色方块 |
 | `texture_loaded` 信号去重等待列表是否有内存上限？若下游系统反复 `request_texture()` 同一 id 且纹理始终加载失败，等待列表会无限增长 | 实现阶段 | 实现时 | 建议实现时给每个纹理的等待列表加 `MAX_WAITERS = 10` 上限，超出时 `push_warning()` |
@@ -506,3 +507,5 @@ max_poll_iterations = min(5, pending_request_count)
 | 暖缓存实现 | 自维护 `_warm_cache: Dictionary`，含 `MAX_WARM_FULL = 4` 上限 |
 | THUMB 内存估算 | 统一为 9KB（48×48×4 = 9,216 bytes） |
 | 回退策略 | 同步 `load()` 回退不可行——改用 GPU 压缩 + 增大热缓存 |
+| 线程加载验证 | `/prototype resource-loader` 在 Godot 4.6.3 native/editor 与 Web-over-HTTP 中通过 |
+| 引擎缓存释放 | `ResourceLoader.remove_resource_from_cache()` 不存在；实现不得依赖显式引擎缓存移除 |

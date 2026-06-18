@@ -20,13 +20,16 @@ var _pending_requests: Dictionary = {}
 var _load_start_count: Dictionary = {}
 var _loaded_callbacks: Dictionary = {}
 var _errors: Array[String] = []
+var _warnings: Array[String] = []
 var _steps: Array[Callable] = []
 var _step_index := 0
 var _frame := 0
+var _reported_missing_engine_cache_release := false
 
 func _ready() -> void:
 	_build_ui()
 	_log("Resource Loader spike starting.")
+	_log("Press Play (F5) on this project, not just open the editor window.")
 	_log("Engine version: %s" % Engine.get_version_info().get("string", "unknown"))
 	_prepare_probe_assets()
 	_steps = [
@@ -110,7 +113,7 @@ func _test_hot_warm_lru() -> void:
 
 func _test_evict_full_textures() -> void:
 	_log("")
-	_log("TEST 4: evict_full_textures clears FULL only and calls remove_resource_from_cache.")
+	_log("TEST 4: evict_full_textures clears FULL only. Engine cache release API is probed as a design finding.")
 	_insert_hot("item_12", THUMB, load(_path_for("item_12", THUMB)))
 	_insert_hot("item_13", FULL, load(_path_for("item_13", FULL)))
 	evict_full_textures()
@@ -140,7 +143,12 @@ func _finish() -> void:
 	_log("")
 	if _errors.is_empty():
 		_log("SPIKE RESULT: PASS")
-		_log("Native/editor API assumptions held. Web export still needs browser run for final P0 validation.")
+		_log("Native/editor threaded loading and local cache behavior held.")
+		if not _warnings.is_empty():
+			_log("DESIGN WARNINGS:")
+			for warning in _warnings:
+				_log("WARNING: %s" % warning)
+		_log("Web export still needs browser run for final P0 validation.")
 	else:
 		_log("SPIKE RESULT: FAIL")
 		for error in _errors:
@@ -189,11 +197,11 @@ func is_cached(item_id: String, resolution: int) -> bool:
 func evict_full_textures() -> void:
 	for key in _hot_cache.keys():
 		if key.ends_with(":%d" % FULL):
-			ResourceLoader.remove_resource_from_cache(_hot_cache[key]["path"])
+			_release_engine_cache_if_supported(_hot_cache[key]["path"])
 			_hot_cache.erase(key)
 	for key in _warm_cache.keys():
 		if key.ends_with(":%d" % FULL):
-			ResourceLoader.remove_resource_from_cache(_warm_cache[key]["path"])
+			_release_engine_cache_if_supported(_warm_cache[key]["path"])
 			_warm_cache.erase(key)
 	for key in _pending_requests.keys():
 		if key.ends_with(":%d" % FULL):
@@ -246,8 +254,15 @@ func _enforce_hot_limit() -> void:
 func _enforce_warm_limit() -> void:
 	while _count_resolution(_warm_cache, FULL) > MAX_WARM_FULL:
 		var oldest_key := _oldest_key(_warm_cache, FULL)
-		ResourceLoader.remove_resource_from_cache(_warm_cache[oldest_key]["path"])
+		_release_engine_cache_if_supported(_warm_cache[oldest_key]["path"])
 		_warm_cache.erase(oldest_key)
+
+func _release_engine_cache_if_supported(path: String) -> void:
+	# Godot 4.6 stable ResourceLoader has no remove_resource_from_cache() method.
+	# This spike keeps local eviction testable while surfacing the GDD design risk.
+	if not _reported_missing_engine_cache_release:
+		_reported_missing_engine_cache_release = true
+		_warn("ResourceLoader has no remove_resource_from_cache() API in Godot 4.6; local references can be cleared, but explicit engine cache eviction must be redesigned. First affected path: %s" % path)
 
 func _notify_callbacks(key: String, texture: Texture2D) -> void:
 	if not _pending_requests.has(key):
@@ -302,8 +317,11 @@ func _fail(message: String) -> void:
 	_errors.append(message)
 	_log("FAIL: %s" % message)
 
+func _warn(message: String) -> void:
+	_warnings.append(message)
+	_log("WARN: %s" % message)
+
 func _log(message: String) -> void:
 	print(message)
 	if _label != null:
 		_label.append_text(message + "\n")
-

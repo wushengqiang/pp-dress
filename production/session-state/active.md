@@ -2,29 +2,44 @@
 
 <!-- STATUS -->
 Epic: Pre-Production Readiness
-Feature: Cross-GDD Review
-Task: Holistic MVP GDD review
+Feature: Master Architecture
+Task: Create master architecture document
 <!-- /STATUS -->
 
-**Task**: Holistic MVP GDD review
-**Status**: Major warnings resolved
-**File**: design/gdd/gdd-cross-review-2026-06-11-rerun.md
-**Verdict**: CONCERNS
-**Current section**: Post-warning cleanup verification
+**Task**: Create master architecture document
+**Status**: Complete draft written
+**File**: docs/architecture/architecture.md
+**Verdict**: APPROVED WITH CONDITIONS
+**Current section**: ADR authoring handoff
 
 **Summary**:
-- `/review-all-gdds` rerun on 2026-06-11 found no remaining blocking cross-GDD contradictions.
-- Prior blockers are resolved: unified Autoload order, refreshed `systems-index.md` dependency/layer map, and revised Save/Load AC-9 to day 2+ unlock round-trip semantics.
-- Major warning-level drift has been resolved: Wardrobe UI/InputManager contract, progress item-count example, scene-state Autoload prose, systems-index/resource-loader layer labels, wardrobe-database pillar metadata, and optional audio registry key family.
+- `/create-architecture` produced `docs/architecture/architecture.md` v0.1 on 2026-06-18.
+- The architecture covers layer mapping, module ownership, data flows, API boundaries, engine risk notes, ADR audit, required ADRs, and architecture principles.
+- Technical Director self-review using TD-ARCHITECTURE: APPROVED WITH CONDITIONS.
+- Lead Programmer feasibility review skipped because `production/review-mode.txt` is `lean`.
+- Main condition: write and accept Foundation ADRs before implementation begins.
 
 **Next**:
-- Run `/consistency-check` to verify warning cleanup.
-- Run `/design-review` on remaining non-approved GDDs: sprite-layered-rendering, save-load, input-management.
-- Run resource-loader and drag-dress-up prototypes before implementation handoff.
-- Run `/gate-check pre-production` after remaining GDD reviews and P0 prototype checks.
+- Run `/architecture-decision "Autoload order and boot orchestration"`.
+- Run `/architecture-decision "Persistence ownership and save rollback strategy"`.
+- Run `/architecture-decision "Texture loading cache and Web fallback strategy"`.
+- Run `/architecture-decision "Scene transition and state machine contract"`.
+- Run `/architecture-decision "Input gesture ownership and UI focus model"`.
+- After required ADRs, run `/architecture-review`, `/test-setup`, `/ux-design`, and then `/gate-check pre-production`.
 
 <!-- CONSISTENCY-CHECK: 2026-06-10 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-10.md -->
 <!-- CONSISTENCY-CHECK: 2026-06-15 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-15.md -->
+
+## Session Extract - /create-architecture 2026-06-18
+
+- Artifact: docs/architecture/architecture.md
+- Version: 0.1
+- Verdict: APPROVED WITH CONDITIONS
+- Technical Director self-review: APPROVED WITH CONDITIONS using TD-ARCHITECTURE.
+- Lead Programmer feasibility: skipped in lean review mode.
+- Coverage: system layer map, module ownership, data flow, API boundaries, ADR audit, required ADR list, architecture principles, and open questions.
+- Blockers before implementation: five Foundation ADRs must be written and accepted: Autoload order and boot orchestration; Persistence ownership and save rollback strategy; Texture loading cache and Web fallback strategy; Scene transition and state machine contract; Input gesture ownership and UI focus model.
+- Notes: No existing ADRs were found. TR registry exists but is empty, so requirement IDs are currently range-level placeholders in the architecture.
 
 ## Session Extract - /review-all-gdds 2026-06-10
 
@@ -97,5 +112,21 @@ Task: Holistic MVP GDD review
 - Path: Engine / Godot 4.6 standalone prototype
 - Prototype: prototypes/resource-loader-spike-2026-06-16/
 - Question: Can Godot 4.6 validate the Resource Loader GDD assumptions for threaded texture loading, deduped requests, hot/warm cache eviction, `remove_resource_from_cache()`, and memory estimates?
-- Status: Prototype files written; pending manual Godot native/editor run and Web export run.
+- Status: Native/editor and Web-over-HTTP runs passed (`SPIKE RESULT: PASS`). Design finding: Godot 4.6 has no `ResourceLoader.remove_resource_from_cache()` GDScript API, so the Resource Loader GDD needs a supported cache-release strategy.
 - Note: prototypes/resource-loader-spike-2026-06-16/SPIKE-NOTE.md
+
+## Session Extract - resource-loader GDD fix 2026-06-18
+
+- Status: Fixed
+- File: design/gdd/resource-loader.md
+- Change: Removed the invalid `ResourceLoader.remove_resource_from_cache()` implementation requirement and replaced it with a supported cache strategy: use `cache_mode` deliberately, clear TextureCache-owned strong references, and treat engine cache release as Godot reference-count lifecycle rather than a callable API.
+- Prototype evidence: `prototypes/resource-loader-spike-2026-06-16/SPIKE-NOTE.md` reports native/editor and Web-over-HTTP `SPIKE RESULT: PASS`.
+
+## Session Extract - /prototype drag-dress-up 2026-06-18
+
+- Mode: Mid-production technical spike
+- Path: Engine / Godot 4.6 standalone prototype
+- Prototype: prototypes/drag-dress-up-spike-2026-06-18/
+- Question: Can Godot 4.6 Web provide responsive drag-to-character dress-up interaction, outside-drop cancellation, and equivalent click-to-apply fallback without browser-default interference?
+- Status: PASS. Native/editor and Web-over-HTTP core checks pass: drag works, outside-drop cancellation works, click-to-apply fallback works, and no blocking browser-default interference was observed.
+- Note: prototypes/drag-dress-up-spike-2026-06-18/SPIKE-NOTE.md
