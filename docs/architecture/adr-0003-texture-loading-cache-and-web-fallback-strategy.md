@@ -1,7 +1,7 @@
 # ADR-0003: Texture Loading Cache and Web Fallback Strategy
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

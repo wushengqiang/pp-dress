@@ -1,7 +1,7 @@
 # ADR-0008: Progression and Unlock Event Contract
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

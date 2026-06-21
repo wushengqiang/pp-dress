@@ -40,6 +40,7 @@ dist/
 
 # === Engine: Godot ===
 .godot/
+reports/
 *.translation
 export_presets.cfg
 # Uncomment if using Godot:

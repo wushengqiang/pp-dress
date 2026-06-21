@@ -1,7 +1,7 @@
 ﻿# ADR-0007: Sprite Layered Renderer and Outfit State Ownership
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

@@ -1,7 +1,7 @@
 # ADR-0001: Autoload Order and Boot Orchestration
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

@@ -1,7 +1,7 @@
 # ADR-0004: Scene Transition and State Machine Contract
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

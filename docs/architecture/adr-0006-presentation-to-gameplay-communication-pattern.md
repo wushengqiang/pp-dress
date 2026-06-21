@@ -1,7 +1,7 @@
 # ADR-0006: Presentation to Gameplay Communication Pattern
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

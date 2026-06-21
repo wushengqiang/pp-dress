@@ -70,7 +70,7 @@
 **内容数据载体规则**：
 - MVP 内容表可以实现为 Godot `Resource`、`.tres`、JSON-like `Dictionary` 或同等静态数据结构，但必须在实现前固定为一个 provider API。
 - 最小数据根为 `dialogue_sequences: Dictionary[int, DialogueSequence]`，必须含 `1..7` day key。
-- 本地化文本表与内容表分离：内容表只保存 `text_key` 和 `speaker_name_key`，正式玩家可见文字由 Godot Translation / CSV 导入或等价本地化资源提供。
+- 本地化文本表与内容表分离：内容表只保存 `text_key` 和 `speaker_name_key`，正式玩家可见文字由 ADR-0011 确认的 Godot Translation CSV 导入资源提供。
 - 内容 provider 拥有数据校验职责：启动或测试阶段必须校验 day key、必填字段、line count、禁用评价语义、fallback sequence 和文本长度风险。
 
 **服装 flavor 规则**：
@@ -378,5 +378,5 @@ flavor_line_count = min(candidate_flavor_lines.size(), MAX_FLAVOR_LINES_PER_SEQU
 | MVP 是否需要真实服装 flavor，还是只使用 scene/tag flavor？ | 叙事 / 制作 | 实现排期前 | 当前允许最多 1 条非评分 flavor，但可在 MVP 中先关闭。 |
 | `portrait_expression` key 是否映射角色立绘表情，还是对话 UI 头像表情？ | 美术 / 对话 UI / 每日场景 | 资产规格前 | 本 GDD 只定义 key，不决定具体渲染位置。 |
 | `mood_key` 是否需要接入音频氛围，还是只作为内容元数据？ | 音频 / 每日场景 | 资产规格前 | 当前不作为强依赖。 |
-| 正式本地化表采用 CSV 导入 Godot Translation 资源，还是等价本地化资源？ | 本地化 / 技术设计 | 架构或实现前 | 内容表必须只保存 key，并保证 `text_key` 可被 `tr()` 路径消费。 |
+| 正式本地化表格式 | 本地化 / 技术设计 | Resolved by ADR-0011 | ADR-0011 已锁定 Godot Translation CSV 导入；内容表只保存 key，并保证 `text_key` 可被 `tr()` 路径消费。 |
 | 内容校验由哪个工具执行？ | QA / 工程 | story 创建前 | 建议实现轻量内容验证测试，检查字段、长度、禁用词和 fallback。 |

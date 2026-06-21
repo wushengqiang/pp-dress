@@ -1,7 +1,7 @@
 # ADR-0005: Input Gesture Ownership and UI Focus Model
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18

@@ -30,7 +30,7 @@
 #   Superseded entries:     Grep pattern="status: superseded"
 
 version: 1
-last_updated: "2026-06-18"
+last_updated: "2026-06-20"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -176,6 +176,17 @@ state_ownership:
     referenced_by:
       - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
     added: 2026-06-18
+    revised: ""
+
+  - state: wardrobe_static_catalog
+    status: active
+    owner_system: WardrobeDatabase
+    adr: docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    interface: "WardrobeDatabase owns static wardrobe JSON metadata and exposes defensive-copy read-only query snapshots."
+    write_access: Startup load/validation only; no runtime mutation API
+    referenced_by:
+      - docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    added: 2026-06-20
     revised: ""
 
 # Example:
@@ -433,6 +444,39 @@ interfaces:
     added: 2026-06-18
     revised: ""
 
+  - contract: audio_event_routing
+    status: active
+    pattern: direct_call
+    producer: UI / Gameplay / Scene / Unlock systems
+    consumers:
+      - AudioManager
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    method_signature: "AudioManager.play_event(event_key: String, context: Dictionary = {}) -> void"
+    interface: "Callers send stable audio event intent keys only; AudioManager owns event mapping, buses, SFX/UI pools, music fades, Web unlock, mute/suspended states, and soft failure handling."
+    referenced_by:
+      - docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+    revised: ""
+
+  - contract: wardrobe_database_read_queries
+    status: active
+    pattern: direct_call
+    producer: WardrobeDatabase
+    consumers:
+      - TextureCache
+      - ProgressManager
+      - WardrobeUI
+      - SpriteLayeredRenderer
+      - ClothingUnlock
+      - GameState
+    adr: docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    method_signature: "get_all_items(), get_items_by_category(category), get_items_by_tag(tag), get_item_by_id(id), get_unlocked_items(day), get_z_index(item), get_categories()"
+    interface: "WardrobeDatabase query methods return deterministic defensive-copy snapshots; consumers must treat them as read-only static metadata and use domain owners for availability, texture lifecycle, UI state, and equipped state."
+    referenced_by:
+      - docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    added: 2026-06-20
+    revised: ""
+
 # Example:
 #
 # interfaces:
@@ -492,6 +536,28 @@ performance_budgets:
     referenced_by:
       - docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md
     added: 2026-06-18
+    revised: ""
+
+  - system: AudioManager event dispatch
+    status: active
+    budget_ms: 0.5
+    platform: Web
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    notes: "Event lookup, cooldown checks, state checks, and pool selection should stay under 0.5ms per discrete event, excluding audio decoding and browser mixer cost."
+    referenced_by:
+      - docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+    revised: ""
+
+  - system: WardrobeDatabase query snapshots
+    status: active
+    budget_ms: 16
+    platform: Web
+    adr: docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    notes: "The GDD requires get_all_items() over the standard 30-item data set to support 50 consecutive calls under one 16ms frame budget; larger inventories need profiling or a future ADR."
+    referenced_by:
+      - docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    added: 2026-06-20
     revised: ""
 
 # Example:
@@ -578,6 +644,39 @@ api_decisions:
     referenced_by:
       - docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md
     added: 2026-06-18
+    revised: ""
+
+  - purpose: audio_bus_and_short_sound_playback
+    status: active
+    api: "AudioServer buses + pooled AudioStreamPlayer nodes"
+    confirmation: "UI/SFX events route through Master/Music/SFX/UI buses and reuse bounded AudioStreamPlayer pools; callers must not create short-sound players directly."
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    reason: "Central bus ownership and pooling keep volume, concurrency, cooldown, and non-blocking failure behavior consistent across UI and gameplay feedback."
+    referenced_by:
+      - docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+    revised: ""
+
+  - purpose: web_audio_unlock
+    status: active
+    api: "AudioManager internal WAITING_FOR_USER_GESTURE unlock queue"
+    confirmation: "Web audio unlock is handled inside AudioManager; only allowed music/page events queue before first gesture, and stale short UI/SFX events are not replayed after unlock."
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    reason: "Browser autoplay policy is a platform state, not a gameplay/UI success condition."
+    referenced_by:
+      - docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+    revised: ""
+
+  - purpose: wardrobe_json_startup_load
+    status: active
+    api: "FileAccess.open() + JSON.new().parse()"
+    confirmation: "WardrobeDatabase loads res://assets/data/wardrobe.json synchronously in _ready(), validates schema before setting is_ready, and uses JSON instance parsing for line-numbered errors."
+    adr: docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    reason: "The wardrobe database is a small static Web-exported JSON file; synchronous startup validation gives all consumers one deterministic read-only catalog and avoids dead ready/error signals."
+    referenced_by:
+      - docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    added: 2026-06-20
     revised: ""
 
 # Example:
@@ -751,6 +850,48 @@ forbidden_patterns:
     why: "Audio should follow committed unlock presentation only, not speculative progression polling or empty unlock days."
     adr: docs/architecture/adr-0008-progression-and-unlock-event-contract.md
     added: 2026-06-18
+
+  - pattern: direct_audio_player_creation_in_callers
+    status: active
+    description: "UI, gameplay, scene, dialogue, and unlock systems must not create AudioStreamPlayer nodes or play raw audio resources directly for normal feedback."
+    why: "Direct playback bypasses AudioManager's bus ownership, Web unlock handling, cooldowns, pool limits, mute/suspended states, and non-blocking failure rules."
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+
+  - pattern: raw_audio_resource_event_payloads
+    status: active
+    description: "Callers must not pass raw AudioStream resources, resource paths, bus names, nodes, or gameplay authority through AudioManager.play_event context."
+    why: "Audio event payloads are lightweight intent context only; resource mapping and routing belong to AudioManager."
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+
+  - pattern: audio_event_routing_as_gameplay_bus
+    status: active
+    description: "Audio event routing must not be used as a general gameplay, UI, analytics, or state-transition event bus."
+    why: "ADR-0006 rejects a global MVP event bus for UI/gameplay communication, and audio feedback must not become gameplay authority."
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+
+  - pattern: stale_web_unlock_sfx_replay
+    status: active
+    description: "AudioManager must not replay queued stale hover, drag, locked-click, rapid-click, or other short UI/SFX events after Web audio unlock."
+    why: "Browser unlock should restore current sound state, not burst old player interactions and break the project's low-pressure tone."
+    adr: docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md
+    added: 2026-06-20
+
+  - pattern: mutable_wardrobe_query_state
+    status: active
+    description: "Consumers must not treat WardrobeDatabase query return values as live mutable shared state or retain mutated snapshots as authoritative wardrobe data."
+    why: "WardrobeDatabase query results are defensive-copy snapshots; mutable shared dictionaries would let UI, progression, renderer, or loading code corrupt each other's assumptions."
+    adr: docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    added: 2026-06-20
+
+  - pattern: wardrobe_database_as_unlock_authority
+    status: active
+    description: "WardrobeDatabase must not emit unlock events, decide current item availability, mutate unlock progress, or replace ProgressManager.items_unlocked(...) as the unlock authority."
+    why: "WardrobeDatabase owns static unlock_day metadata only; current availability and newly unlocked events are ProgressManager responsibilities."
+    adr: docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md
+    added: 2026-06-20
 
 # Example:
 #

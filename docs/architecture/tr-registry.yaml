@@ -24,10 +24,129 @@
 #
 # STATUS VALUES: active | deprecated | superseded-by: TR-[system]-NNN
 
-version: 1
-last_updated: ""
+version: 2
+last_updated: "2026-06-20"
 
-requirements: []
+requirements:
+  - id: TR-wardrobe-database-001
+    system: wardrobe-database
+    gdd: design/gdd/wardrobe-database.md
+    requirement: "Static wardrobe JSON schema, read-only query API, z-index resolution, unlock-day metadata, deterministic ordering, and schema validation."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-save-load-001
+    system: save-load
+    gdd: design/gdd/save-load.md
+    requirement: "SaveData schema, Web/local persistence, bad-save protection, bounded write ownership, GOODNIGHT rollback, and recovery semantics."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-input-management-001
+    system: input-management
+    gdd: design/gdd/input-management.md
+    requirement: "Mouse/touch normalization, explicit gesture regions, drag/click/scroll arbitration, native GUI separation, and Godot 4.6 focus handling."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-audio-management-001
+    system: audio-management
+    gdd: design/gdd/audio-management.md
+    requirement: "Event-key audio routing, buses, SFX/UI pools, Web audio unlock, cooldowns, and non-blocking audio failure behavior."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-resource-loader-001
+    system: resource-loader
+    gdd: design/gdd/resource-loader.md
+    requirement: "TextureCache tiered loading, threaded requests, HOT/WARM cache, LRU eviction, duplicate request fan-out, Web fallback, and memory budget handling."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-scene-state-001
+    system: scene-state-management
+    gdd: design/gdd/scene-state-management.md
+    requirement: "Autoload order, BOOT orchestration, GameState finite state machine, scene readiness handshake, transition timeout, and recovery routing."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-progress-management-001
+    system: progress-management
+    gdd: design/gdd/progress-management.md
+    requirement: "Current-day authority, unlock computation, post-save progress signals, save-failure rollback, and unlock availability boundary."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-sprite-layered-rendering-001
+    system: sprite-layered-rendering
+    gdd: design/gdd/sprite-layered-rendering.md
+    requirement: "Sprite2D layered renderer, z-index ordering, renderer-owned outfit state, async callback guards, and result signal semantics."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-wardrobe-ui-001
+    system: wardrobe-ui
+    gdd: design/gdd/wardrobe-ui.md
+    requirement: "Category and item grid UI, thumbnail consumption, ProgressManager availability, gesture-region mapping, drag/click intents, and confirmed outfit UI state."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-dialogue-ui-001
+    system: dialogue-ui
+    gdd: design/gdd/dialogue-ui.md
+    requirement: "Dialogue rendering, typewriter/input advancement, provider consumption, completion signal, fallback behavior, and focus/accessibility boundaries."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-main-menu-goodnight-ui-001
+    system: main-menu-goodnight-ui
+    gdd: design/gdd/main-menu-goodnight-ui.md
+    requirement: "Start/goodnight/retry/continue transition intents, no progression ownership, native button paths, focus behavior, and audio event routing."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-drag-dress-up-001
+    system: drag-dress-up
+    gdd: design/gdd/drag-dress-up.md
+    requirement: "Drop validation, click alternative, equip request tokening, renderer-result mapping, soft feedback, and no persistence/progression ownership."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-daily-scene-001
+    system: daily-scene
+    gdd: design/gdd/daily-scene.md
+    requirement: "Day/context consumption, character/background/dialogue hosting, outfit application, fallback controls, and GOODNIGHT request ownership."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-light-narrative-dialogue-001
+    system: light-narrative-dialogue
+    gdd: design/gdd/light-narrative-dialogue.md
+    requirement: "Seven-day dialogue provider, sequence and line data contract, localization keys, deterministic fallback, and non-scoring flavor lines."
+    created: 2026-06-20
+    revised: ""
+    status: active
+
+  - id: TR-clothing-unlock-001
+    system: clothing-unlock
+    gdd: design/gdd/clothing-unlock.md
+    requirement: "Confirmed unlock presentation only, item validation, prompt timing, wardrobe one-time highlight handoff, and unlock audio event routing."
+    created: 2026-06-20
+    revised: ""
+    status: active
 
 # --- EXAMPLE ENTRIES (remove when first real entries are added) ---
 #

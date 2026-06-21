@@ -26,7 +26,7 @@
 **内容来源规则**：
 - 对话 UI 在 `_ready()` 中直接读取 `GameState.current_state`、`GameState.context` 和 `GameState.get_current_day()`，而不是只等待 `state_changed` 信号。
 - 若当前状态不是 `DAILY_SCENE`，对话 UI 不展示正文，只保持隐藏或 disabled 状态。
-- 当 `current_state == DAILY_SCENE` 时，对话 UI 使用临时契约 `request_dialogue_sequence(day, context)` 请求当天对话序列。MVP 临时 owner 为对话 UI 内置的 fallback provider；未来 `轻叙事对话` GDD 完成后，该接口迁移到正式内容 provider。
+- 当 `current_state == DAILY_SCENE` 时，对话 UI 调用 ADR-0011 确认的正式契约 `LightNarrativeDialogue.request_dialogue_sequence(day, context)` 请求当天对话序列。对话 UI 内置 fallback provider 只在正式 provider 不可用、返回无效序列或本地化缺失无法播放时兜底。
 - MVP 对话序列为线性数组，不包含玩家选项、分支结局、评分、好感度变化或失败状态。
 - 每条对话行至少包含：`line_id`、`speaker_id`、`speaker_name`、`text_key` 或 `text`、`portrait_expression`、`line_type`。`line_id` 用于日志、跳过坏行和测试定位。
 - `line_type` 可为 `dialogue`、`narration`、`system_hint`；MVP 中 `system_hint` 只用于温和操作提示，不承载攻略或评分。
@@ -41,7 +41,7 @@
 
 **结束规则**：
 - 对话序列播放到最后一条后，对话 UI 显示温和的结束操作，例如 `晚安` 或 `继续`。
-- 玩家确认结束后，对话 UI 发出临时契约 `dialogue_sequence_finished(day)`。MVP 中该事件由每日场景接收，再由每日场景请求 `GameState.request_transition(State.GOODNIGHT)` 或等价状态转换入口。
+- 玩家确认结束后，对话 UI 发出 `dialogue_sequence_finished(day)`。该事件由每日场景接收，再由每日场景请求 `GameState.request_transition(State.GOODNIGHT)` 或等价状态转换入口。
 - 对话 UI 不直接调用 `ProgressManager.advance_day()`；天数推进仍只发生在 `GOODNIGHT → MAIN_MENU`。
 - 对话 UI 不直接调用 `GameState.request_transition(State.GOODNIGHT)`；它只发出“对话已完成”的用户意图，状态转换由每日场景或上层状态承接者执行。
 
@@ -89,14 +89,15 @@ HIDDEN
 | 场景/状态管理 | 本系统依赖 | 读取 `GameState.current_state`、`GameState.context`、`GameState.get_current_day()`；结束时发出进入 GOODNIGHT 的用户意图 |
 | 进度管理 | 间接依赖 | ProgressManager 是天数权威源，但对话 UI 不直接调用它；对话 UI 通过 `GameState.get_current_day()` 或 `GameState.context["current_day"]` 获取当前天数 |
 | 每日场景 | 依赖本系统（未来） | 每日场景承载角色、背景和对话 UI；MVP 中接收 `dialogue_sequence_finished(day)` 后请求 `DAILY_SCENE → GOODNIGHT` |
-| 轻叙事对话 | 被本系统依赖（未来） | 未来提供 `request_dialogue_sequence(day, context)` 的正式内容来源；决定台词文本、角色表情和未来可能的服装响应 |
+| 轻叙事对话 | 被本系统依赖 | 通过 ADR-0011 确认的 `request_dialogue_sequence(day, context)` 提供正式内容来源；决定台词 key、角色表情 key 和未来可能的服装响应 |
 | 衣橱 UI | 间接相关 | 衣橱 UI 写入 `context["equipped_items"]`；对话 UI 可把该 context 传给对话内容系统，但不直接解释服装数据 |
 | 音频管理 | 弱依赖（未来） | 播放轻柔点击音、文本推进音、结束提示音；对话 UI 只发出 UI 事件，不直接管理音频资产 |
 
-**临时契约说明**：
-- `request_dialogue_sequence(day, context)` 在 MVP 中由对话 UI 内置 fallback provider 实现，返回每天一组安全线性文本；未来迁移给 `轻叙事对话` 系统。
-- `dialogue_sequence_finished(day)` 是对话 UI 向每日场景传递“当天对话读完”的临时事件；每日场景负责请求进入 `GOODNIGHT`。
-- 若后续 `每日场景` 或 `轻叙事对话` GDD 采用不同接口，必须回传修订本 GDD。
+**正式契约说明**：
+- `request_dialogue_sequence(day, context)` 的正式 owner 是 `LightNarrativeDialogue`，由 ADR-0011 定义；对话 UI 是唯一常规请求方。
+- 对话 UI 内置 fallback provider 只作为正式 provider 不可用或返回不可播放序列时的兜底路径。
+- `dialogue_sequence_finished(day)` 是对话 UI 向每日场景传递“当天对话读完”的事件；每日场景负责请求进入 `GOODNIGHT`。
+- 若后续 `每日场景` 或 `轻叙事对话` GDD 改变接口，必须同步修订本 GDD 和 ADR-0011。
 
 ## Formulas
 
@@ -225,14 +226,14 @@ interactive_target_height >= 44px
 | 场景/状态管理 | Strong | 提供 `GameState.current_state`、`GameState.context`、当前天数读取入口，以及 `DAILY_SCENE → GOODNIGHT` 的状态转换承接。对话 UI 必须在 `_ready()` 主动读取当前状态，不能只依赖 `state_changed`。 |
 | 进度管理 | Indirect read-only | 作为 `GameState.get_current_day()` 背后的天数权威源存在。对话 UI 不直接调用 ProgressManager、不调用 `advance_day()`、不写保存数据。 |
 | 每日场景 | Future strong | 负责承载角色、背景、穿搭结果和对话 UI；MVP 中接收 `dialogue_sequence_finished(day)` 后请求进入晚安流程。 |
-| 轻叙事对话 | Future strong | 未来接管 `request_dialogue_sequence(day, context)` 的正式内容来源，拥有台词、旁白、表情和未来服装响应规则。MVP 未接入时由对话 UI fallback provider 返回安全线性文本。 |
+| 轻叙事对话 | Strong | 通过 ADR-0011 接管 `request_dialogue_sequence(day, context)` 的正式内容来源，拥有台词 key、旁白 key、表情 key 和未来服装响应规则。正式 provider 不可用时由对话 UI fallback provider 返回安全线性文本。 |
 | 衣橱 UI | Indirect | 在玩家确认穿搭后写入 `context["equipped_items"]`；对话 UI 可透传 context，但不解析服装评分或类别逻辑。 |
 | 输入管理 | Optional | 对话 UI 的 MVP 推进可使用 Godot Control `gui_input`、Button `pressed` 和 InputMap confirm action；若后续接入 InputManager，只消费其 `clicked` 信号，不把它列为强依赖。 |
 | 音频管理 | Optional future | 播放文字推进、确认、结束等轻量 UI 音效；对话 UI 只发事件或调用薄接口，不直接管理音频资源生命周期。 |
 
 **Dependency Constraints**
 - 对话 UI 是状态和内容的消费者，不是剧情、进度或保存数据的 owner。
-- `request_dialogue_sequence(day, context)` 与 `dialogue_sequence_finished(day)` 是临时契约；MVP owner 分别为对话 UI fallback provider 与每日场景。后续对应 GDD 若改变接口，必须同步回改本 GDD。
+- `request_dialogue_sequence(day, context)` 是 ADR-0011 确认的正式内容 provider 契约，owner 为 `LightNarrativeDialogue`；`dialogue_sequence_finished(day)` 由对话 UI 发出并由每日场景承接。后续对应 GDD 若改变接口，必须同步回改本 GDD 和 ADR-0011。
 - 所有进度推进必须保留在 `GOODNIGHT → MAIN_MENU` 路径，避免每日对话结束时提前增加天数。
 - 对话 UI 不直接调用 `GameState.request_transition(State.GOODNIGHT)`；该调用属于每日场景或状态承接者。
 
@@ -297,8 +298,8 @@ interactive_target_height >= 44px
 
 ## Open Questions
 
-- `request_dialogue_sequence(day, context)` 的长期 owner 是否为 `轻叙事对话` 系统，还是独立 DialogueProvider？MVP 临时 owner 已定为对话 UI fallback provider。
-- `dialogue_sequence_finished(day)` 长期是否仍由每日场景接收，还是由 GameState 直接订阅？MVP 临时 owner 已定为每日场景。
+- `request_dialogue_sequence(day, context)` 的长期 owner 已由 ADR-0011 确认为 `LightNarrativeDialogue`；对话 UI fallback provider 只保留为兜底路径。
+- `dialogue_sequence_finished(day)` 长期是否仍由每日场景接收，还是由 GameState 直接订阅？当前 ADR-0011 和 Daily Scene 契约维持由每日场景接收。
 - MVP 是否需要默认角色头像/表情资产，还是全部表情由每日场景角色立绘承担？
 - 服装响应台词是否完全延后到 `轻叙事对话`，还是需要在本系统预留一条非评分式 flavor line 插槽？
 - `晚安` 结束按钮是否统一归属于对话 UI，还是后续并入 `主菜单/晚安 UI` 的视觉组件库？

@@ -27,6 +27,12 @@ Task: Create master architecture document
 - Run `/architecture-decision "Input gesture ownership and UI focus model"`.
 - After required ADRs, run `/architecture-review`, `/test-setup`, `/ux-design`, and then `/gate-check pre-production`.
 
+## Session Extract - /ux-design wardrobe-ui 2026-06-21
+
+- Task: Designing wardrobe-ui UX spec
+- Status: Starting (skeleton created)
+- File: design/ux/wardrobe-ui.md
+
 <!-- CONSISTENCY-CHECK: 2026-06-10 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-10.md -->
 <!-- CONSISTENCY-CHECK: 2026-06-15 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-15.md -->
 
@@ -130,3 +136,11 @@ Task: Create master architecture document
 - Question: Can Godot 4.6 Web provide responsive drag-to-character dress-up interaction, outside-drop cancellation, and equivalent click-to-apply fallback without browser-default interference?
 - Status: PASS. Native/editor and Web-over-HTTP core checks pass: drag works, outside-drop cancellation works, click-to-apply fallback works, and no blocking browser-default interference was observed.
 - Note: prototypes/drag-dress-up-spike-2026-06-18/SPIKE-NOTE.md
+
+## Session Extract - /architecture-review 2026-06-20
+- Verdict: CONCERNS
+- Requirements: 15 total - 15 covered, 0 partial, 0 gaps
+- New TR-IDs registered: 15
+- GDD revision flags: None
+- Top ADR gaps: None
+- Report: docs/architecture/architecture-review-2026-06-20.md

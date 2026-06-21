@@ -60,7 +60,7 @@
 
 **对话启动规则**：
 - 每日场景必须在角色视觉就绪后启用或启动对话 UI，避免文字先出现而角色仍为空或未换装完成。
-- 对话 UI 继续使用 `request_dialogue_sequence(day, context)` 临时契约；每日场景只提供上下文，不拥有正式台词库。
+- 对话 UI 使用 ADR-0011 确认的 `LightNarrativeDialogue.request_dialogue_sequence(day, context)` 正式契约；每日场景只提供上下文，不直接请求 provider，也不拥有正式台词库。
 - 每日场景监听 `dialogue_sequence_finished(day)`。
 - 收到对话完成事件后，每日场景请求 `GameState.request_transition(State.GOODNIGHT)` 或等价 `DAILY_SCENE -> GOODNIGHT` 入口。
 - 每日场景不调用 `ProgressManager.advance_day()`；天数推进只发生在 `GOODNIGHT -> MAIN_MENU`。
@@ -111,7 +111,7 @@ UNINITIALIZED
 | 精灵分层渲染 | 强依赖 | 实例化 `Character`，调用 `apply_outfit(equipped_items)` 或兜底默认穿搭，等待 `outfit_applied(item_ids)` |
 | 对话 UI | 强依赖 | 启动每日对话，传入 day/context，监听 `dialogue_sequence_finished(day)` |
 | 进度管理 | 间接只读 | 通过 GameState Facade 获取当前 day；每日场景不直接调用 `advance_day()` |
-| 轻叙事对话 | 未来强依赖 | 未来提供正式每日台词、场景文本、表情和服装 flavor 响应 |
+| 轻叙事对话 | 强依赖 | 通过 ADR-0011 提供正式每日台词 key、场景文本 key、表情 key 和服装 flavor 响应 |
 | 音频管理 | 弱依赖 | 请求每日场景进入、音乐、氛围或转场事件；音频失败不阻塞流程 |
 | 主菜单/晚安 UI | 下游流程 | 每日场景进入 GOODNIGHT 后，由晚安 UI 承接当日收束 |
 
@@ -264,7 +264,7 @@ goodnight_transition_allowed =
 
 | Dependency | Type | Contract |
 |------------|------|----------|
-| 轻叙事对话 | Future strong | 未来接管每日文本、旁白、表情、场景台词和服装 flavor 响应。每日场景只传入 `day`、`scene_id`、`equipped_items` 和 tags，不拥有正式剧情内容。 |
+| 轻叙事对话 | Strong | 通过 ADR-0011 接管每日文本 key、旁白 key、表情 key、场景台词 key 和服装 flavor 响应。每日场景只传入 `day`、`scene_id`、`equipped_items` 和 tags，不拥有正式剧情内容。 |
 | 服装解锁 | Future downstream | 每日场景结束后不展示新解锁内容；服装解锁系统可在 GOODNIGHT 后或返回主菜单时接入。 |
 | UX spec / Asset spec | Future production dependency | 每日场景的具体背景构图、角色锚点、对话安全区和音频/视觉资产需在后续 `/ux-design daily-scene` 与 `/asset-spec system:daily-scene` 中细化。 |
 

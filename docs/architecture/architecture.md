@@ -3,27 +3,27 @@
 ## Document Status
 
 - Version: 0.1
-- Last Updated: 2026-06-18
+- Last Updated: 2026-06-20
 - Engine: Godot 4.6
 - Review Mode: lean
 - GDDs Covered: game-concept.md; systems-index.md; wardrobe-database.md; save-load.md; input-management.md; audio-management.md; resource-loader.md; scene-state-management.md; progress-management.md; sprite-layered-rendering.md; wardrobe-ui.md; dialogue-ui.md; main-menu-goodnight-ui.md; drag-dress-up.md; daily-scene.md; light-narrative-dialogue.md; clothing-unlock.md
-- ADRs Referenced: None found
-- Status: Complete Draft - Pending Technical Director Sign-Off
-- Technical Director Sign-Off: 2026-06-18 - APPROVED WITH CONDITIONS
+- ADRs Referenced: ADR-0001; ADR-0002; ADR-0003; ADR-0004; ADR-0005; ADR-0006; ADR-0007; ADR-0008; ADR-0009; ADR-0010; ADR-0011
+- Status: Reviewed - APPROVED WITH CONDITIONS
+- Technical Director Sign-Off: 2026-06-20 - APPROVED WITH CONDITIONS
 - Lead Programmer Feasibility: SKIPPED - Lean mode
 
 ### Sign-Off Notes
 
-Technical Director self-review applied gate `TD-ARCHITECTURE` from `.Codex/docs/director-gates.md`.
+Technical Director self-review applied gate `TD-ARCHITECTURE` from `.Codex/docs/director-gates.md`, then the 2026-06-20 architecture review validated traceability against ADR-0001 through ADR-0011.
 
 | Criterion | Assessment |
 |-----------|------------|
-| Every technical requirement covered by an architectural decision | CONCERNS: Requirement groups are covered, but stable TR IDs are not yet populated in `tr-registry.yaml`. |
-| HIGH risk engine domains addressed or flagged | APPROVED: UI/Input, Resources, Rendering, SceneTree, FileAccess/JSON, Audio, and Web platform risks are flagged. |
-| API boundaries clean, minimal, implementable | APPROVED WITH CONDITIONS: Boundaries are implementable, but communication style between Presentation/Core modules requires ADR. |
-| Foundation ADR gaps resolved before implementation | CONCERNS: Foundation ADRs are listed but not yet written. Coding should not begin before ADRs 1-5 are accepted. |
+| Every technical requirement covered by an architectural decision | APPROVED: 15/15 requirements are covered by ADR-0001 through ADR-0011. |
+| HIGH risk engine domains addressed or flagged | APPROVED: UI/Input, Resources, Rendering, SceneTree, FileAccess/JSON, Audio, and Web platform risks remain explicitly flagged. |
+| API boundaries clean, minimal, implementable | APPROVED WITH CONDITIONS: boundaries are consistent, but Web and dual-focus behavior still require runtime verification. |
+| Foundation ADR gaps resolved before implementation | APPROVED: foundation ADRs are written and accepted; implementation can proceed after test and UX gate prep. |
 
-Verdict: APPROVED WITH CONDITIONS. Proceed to ADR authoring before implementation.
+Verdict: APPROVED WITH CONDITIONS. Proceed to test/UX gate preparation before implementation.
 
 ## Engine Knowledge Gap Summary
 
@@ -43,7 +43,7 @@ Godot 4.6 is post-cutoff for the model and must be treated as version-sensitive.
 
 ## Technical Requirements Baseline
 
-Technical requirement IDs are provisional until the TR registry is updated. The architecture must cover the following GDD-derived requirement groups:
+Technical requirement IDs are now stable in `docs/registry/architecture.yaml`. The architecture covers the following GDD-derived requirement groups:
 
 | Req ID Range | GDD | System | Requirement Group | Domain |
 |--------------|-----|--------|-------------------|--------|
@@ -626,69 +626,73 @@ One ADR file currently exists under `docs/architecture/`:
 
 ### Traceability Coverage Check
 
-ADR-0001 covers the first Foundation slice: Autoload order and BOOT orchestration. It should be treated as a valid subset ADR, not as complete architecture coverage. All remaining Foundation/Core/Presentation requirement groups still need dedicated ADR coverage before the architecture gate can pass.
+ADR-0001 through ADR-0011 cover the current baseline. The architecture now has complete traceability for the 15 grouped technical requirements reviewed on 2026-06-20.
 
 | Req ID Range | Requirement Group | ADR Coverage | Status |
 |--------------|-------------------|--------------|--------|
-| TR-wardrobe-database-* | JSON schema, read-only query API, z-index resolution, unlock day metadata | None | GAP |
-| TR-save-load-* | Web/local file persistence, SaveData schema, bad-save protection, bounded write ownership | None | GAP |
-| TR-input-management-* | Mouse/touch normalization, registered gesture regions, drag/click/scroll arbitration | None | GAP |
-| TR-audio-management-* | Event-driven audio playback, buses, pools, Web unlock, non-blocking failures | None | GAP |
-| TR-resource-loader-* | TextureCache, tiered loading, threaded requests, hot/warm cache, LRU eviction | None | GAP |
-| TR-scene-state-* | GameState finite state machine, boot orchestration, scene readiness confirmation | ADR-0001 covers Autoload order, BOOT readiness gates, transition readiness confirmation, and empty-outfit recovery semantics | PARTIAL |
-| TR-progress-* | Current day authority, unlock computation, save-failure rollback, progress signals | None | GAP |
-| TR-sprite-rendering-* | Layered Sprite2D renderer, z-index ordering, async callback generation guards | None | GAP |
-| TR-wardrobe-ui-* | Clothing grid, category visibility, thumbnails, drag regions, outfit confirmation | None | GAP |
-| TR-dialogue-ui-* | Typewriter text, input advancement, end confirmation, completion signal | None | GAP |
-| TR-main-menu-goodnight-* | Start, goodnight closure, retry paths, completion/replay entry points | None | GAP |
-| TR-drag-dress-up-* | Drop validation, click alternative, equip request tokening, soft feedback | None | GAP |
-| TR-daily-scene-* | Day/context consumption, character/background/dialogue hosting, goodnight request | None | GAP |
-| TR-light-narrative-* | Seven-day sequence provider, localization keys, non-scoring flavor lines | None | GAP |
-| TR-clothing-unlock-* | Unlock presentation only, item validation, prompt timing, wardrobe highlight handoff | None | GAP |
+| TR-wardrobe-database-* | JSON schema, read-only query API, z-index resolution, unlock day metadata | ADR-0010 | COVERED |
+| TR-save-load-* | Web/local file persistence, SaveData schema, bad-save protection, bounded write ownership | ADR-0002, ADR-0004 | COVERED |
+| TR-input-management-* | Mouse/touch normalization, registered gesture regions, drag/click/scroll arbitration | ADR-0005 | COVERED |
+| TR-audio-management-* | Event-driven audio playback, buses, pools, Web unlock, non-blocking failures | ADR-0009 | COVERED |
+| TR-resource-loader-* | TextureCache, tiered loading, threaded requests, hot/warm cache, LRU eviction | ADR-0003 | COVERED |
+| TR-scene-state-* | GameState finite state machine, boot orchestration, scene readiness confirmation | ADR-0001, ADR-0004 | COVERED |
+| TR-progress-* | Current day authority, unlock computation, save-failure rollback, progress signals | ADR-0002, ADR-0004, ADR-0008 | COVERED |
+| TR-sprite-rendering-* | Layered Sprite2D renderer, z-index ordering, async callback generation guards | ADR-0003, ADR-0007 | COVERED |
+| TR-wardrobe-ui-* | Clothing grid, category visibility, thumbnails, drag regions, outfit confirmation | ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0010 | COVERED |
+| TR-dialogue-ui-* | Typewriter text, input advancement, end confirmation, completion signal | ADR-0005, ADR-0006, ADR-0011 | COVERED |
+| TR-main-menu-goodnight-* | Start, goodnight closure, retry paths, completion/replay entry points | ADR-0004, ADR-0005, ADR-0006, ADR-0009 | COVERED |
+| TR-drag-dress-up-* | Drop validation, click alternative, equip request tokening, soft feedback | ADR-0005, ADR-0006, ADR-0007, ADR-0009 | COVERED |
+| TR-daily-scene-* | Day/context consumption, character/background/dialogue hosting, goodnight request | ADR-0004, ADR-0006, ADR-0007, ADR-0009, ADR-0011 | COVERED |
+| TR-light-narrative-* | Seven-day sequence provider, localization keys, non-scoring flavor lines | ADR-0011 | COVERED |
+| TR-clothing-unlock-* | Unlock presentation only, item validation, prompt timing, wardrobe highlight handoff | ADR-0008, ADR-0009, ADR-0010 | COVERED |
 
 ## Required ADRs
 
-### Must Have Before Coding Starts
+### Accepted ADR Set
 
 1. `docs/architecture/adr-0001-autoload-order-and-boot-orchestration.md`
-   - Status: Proposed; must be accepted before dependent implementation stories are marked ready.
+   - Accepted.
    - Covers initialization order for `WardrobeDatabase`, `GameState`, `SaveManager`, `TextureCache`, `InputManager`, and `ProgressManager`.
-   - Resolves deferred BOOT, readiness checks, and startup failure routing.
-   - Engine risk: SceneTree MEDIUM, Resources HIGH.
 
-2. `/architecture-decision "Persistence ownership and save rollback strategy"`
-   - Covers `SaveManager` boundaries, `ProgressManager` authority, bad-save protection, GOODNIGHT save failure rollback, and limited setter ownership.
-   - Engine risk: FileAccess / JSON / Web storage MEDIUM.
+2. `docs/architecture/adr-0002-persistence-ownership-and-save-rollback-strategy.md`
+   - Accepted.
+   - Covers `SaveManager` boundaries, `ProgressManager` authority, bad-save protection, GOODNIGHT rollback, and limited setter ownership.
 
-3. `/architecture-decision "Texture loading cache and Web fallback strategy"`
-   - Covers `TextureCache` tiered loading, `ResourceLoader.load_threaded_request()`, HOT/WARM LRU, Web threaded-loading validation, memory budgets, and fallback strategy.
-   - Explicitly forbids relying on non-existent `ResourceLoader.remove_resource_from_cache()`.
-   - Engine risk: Resources HIGH, Rendering HIGH, Web Platform MEDIUM.
+3. `docs/architecture/adr-0003-texture-loading-cache-and-web-fallback-strategy.md`
+   - Accepted.
+   - Covers `TextureCache` tiered loading, threaded requests, HOT/WARM LRU, Web validation, memory budgets, and fallback strategy.
 
-4. `/architecture-decision "Scene transition and state machine contract"`
-   - Covers `GameState`, `SceneTree.change_scene_to_file()`, `_on_scene_ready()`, `state_changed` timing, ERROR recovery, QUIT behavior, and context ownership.
-   - Engine risk: SceneTree MEDIUM.
+4. `docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md`
+   - Accepted.
+   - Covers `GameState`, scene readiness, transition timing, recovery routing, and context ownership.
 
-5. `/architecture-decision "Input gesture ownership and UI focus model"`
-   - Covers `InputManager` registered-region ownership, Godot GUI separation, Godot 4.6 dual-focus behavior, drag/click/scroll arbitration, and Web DOM default behavior validation.
-   - Engine risk: UI/Input HIGH.
+5. `docs/architecture/adr-0005-input-gesture-ownership-and-ui-focus-model.md`
+   - Accepted.
+   - Covers `InputManager` region ownership, Godot GUI separation, dual-focus behavior, and gesture arbitration.
 
-### Should Have Before Relevant System Implementation
+6. `docs/architecture/adr-0006-presentation-to-gameplay-communication-pattern.md`
+   - Accepted.
+   - Covers communication boundaries between UI, `DragDressUp`, `ClothingUnlock`, `DailyScene`, and core modules.
 
-6. `/architecture-decision "Presentation to gameplay communication pattern"`
-   - Decides whether UI, `DragDressUp`, `ClothingUnlock`, `DailyScene`, and Core modules communicate by direct call, signals, or a light event bus.
+7. `docs/architecture/adr-0007-sprite-layered-renderer-and-outfit-state-ownership.md`
+   - Accepted.
+   - Covers Sprite2D layout, z-index ordering, outfit ownership, async generation guards, and cross-scene transfer.
 
-7. `/architecture-decision "Sprite layered renderer and outfit state ownership"`
-   - Covers Sprite2D sibling layout, z-index ordering, outfit ownership, async generation guards, and cross-scene outfit transfer.
+8. `docs/architecture/adr-0008-progression-and-unlock-event-contract.md`
+   - Accepted.
+   - Covers seven-day progression, unlock calculation, `items_unlocked`, and unlock presentation boundary.
 
-8. `/architecture-decision "Progression and unlock event contract"`
-   - Covers seven-day progression, unlock calculation, `items_unlocked`, day-1 item behavior, and unlock presentation boundary.
+9. `docs/architecture/adr-0009-audio-event-routing-and-web-unlock-behavior.md`
+   - Accepted.
+   - Covers audio event keys, buses, SFX pool, Web audio unlock, suspended states, and non-blocking failure rules.
 
-9. `/architecture-decision "Dialogue content provider and localization contract"`
-   - Covers `text_key`, `speaker_name_key`, fallback sequences, non-scoring flavor lines, and DialogueUI/DailyScene boundaries.
+10. `docs/architecture/adr-0010-wardrobe-database-schema-and-read-only-query-contract.md`
+    - Accepted.
+    - Covers wardrobe schema, query API, z-index resolution, unlock metadata, and defensive-copy behavior.
 
-10. `/architecture-decision "Audio event routing and Web unlock behavior"`
-    - Covers audio event keys, buses, SFX pool, Web audio unlock, mute/suspended states, and non-blocking failure rules.
+11. `docs/architecture/adr-0011-dialogue-content-provider-and-localization-contract.md`
+    - Accepted.
+    - Covers dialogue content provider boundaries, localization keys, fallback sequences, and layout constraints.
 
 ### Can Defer To Implementation Or Asset Pipeline
 
@@ -712,5 +716,4 @@ ADR-0001 covers the first Foundation slice: Autoload order and BOOT orchestratio
 - OQ-002: Several older design documents render with mojibake in PowerShell output; architecture extraction relies on readable sections and newer reviewed GDDs.
 - OQ-003: Web drag feel validation is complete. `/prototype drag-dress-up` passed on 2026-06-18; remaining work is to translate findings into implementation stories and ADR decisions.
 - OQ-004: Character drop-hotzone source is not final.
-- OQ-005: Presentation/Core communication mechanism is not final.
-- OQ-006: Basis Universal texture compression adoption is not final.
+- OQ-005: Basis Universal texture compression adoption is not final.

@@ -1,7 +1,7 @@
 # ADR-0002: Persistence Ownership and Save Rollback Strategy
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-06-18
