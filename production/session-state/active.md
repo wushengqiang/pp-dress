@@ -144,3 +144,5 @@ Task: Create master architecture document
 - GDD revision flags: None
 - Top ADR gaps: None
 - Report: docs/architecture/architecture-review-2026-06-20.md
+
+<!-- CONSISTENCY-CHECK: 2026-06-21 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-21.md -->
