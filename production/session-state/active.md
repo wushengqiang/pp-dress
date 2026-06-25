@@ -2,15 +2,32 @@
 
 <!-- STATUS -->
 Epic: Pre-Production Readiness
-Feature: Master Architecture
-Task: Create master architecture document
+Feature: UI / UX
+Task: Designing dialogue-ui UX spec
 <!-- /STATUS -->
 
-**Task**: Create master architecture document
+**Task**: Designing dialogue-ui UX spec
 **Status**: Complete draft written
-**File**: docs/architecture/architecture.md
-**Verdict**: APPROVED WITH CONDITIONS
-**Current section**: ADR authoring handoff
+**File**: design/ux/dialogue-ui.md
+**Current section**: Complete
+
+**Next**:
+- Run `/ux-review dialogue-ui` to validate the spec before implementation.
+
+## Session Extract - /ux-design dialogue-ui 2026-06-25
+
+- Task: Designing dialogue-ui UX spec
+- Status: Complete draft written
+- File: design/ux/dialogue-ui.md
+- Current section: Complete
+
+## Session Extract - /ux-design patterns 2026-06-23
+
+- Task: Designing interaction pattern library
+- Status: Overview and pattern catalog written
+- File: design/ux/interaction-patterns.md
+- Current section: Complete
+- Next: Run `/ux-review interaction-patterns` to validate the pattern library.
 
 **Summary**:
 - `/create-architecture` produced `docs/architecture/architecture.md` v0.1 on 2026-06-18.
@@ -30,8 +47,9 @@ Task: Create master architecture document
 ## Session Extract - /ux-design wardrobe-ui 2026-06-21
 
 - Task: Designing wardrobe-ui UX spec
-- Status: Starting (skeleton created)
+- Status: Complete draft written
 - File: design/ux/wardrobe-ui.md
+- Current section: Complete
 
 <!-- CONSISTENCY-CHECK: 2026-06-10 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-10.md -->
 <!-- CONSISTENCY-CHECK: 2026-06-15 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-15.md -->
@@ -146,3 +164,11 @@ Task: Create master architecture document
 - Report: docs/architecture/architecture-review-2026-06-20.md
 
 <!-- CONSISTENCY-CHECK: 2026-06-21 | GDDs checked: 15 | Conflicts found: 0 | Report: docs/consistency-report-2026-06-21.md -->
+
+## Session Extract — /review-all-gdds 2026-06-21
+- Verdict: CONCERNS
+- GDDs reviewed: 15
+- Flagged for revision: None
+- Blocking issues: None
+- Recommended next: 再跑一次 /review-all-gdds 或 /consistency-check 确认无回归
+- Report: design/gdd/gdd-cross-review-2026-06-21.md

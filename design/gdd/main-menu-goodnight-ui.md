@@ -45,8 +45,8 @@
 - 重玩不调用 `advance_day()`。
 
 **显示与输入规则**：
-- 所有按钮均支持鼠标、触摸、键盘和手柄确认。
-- Godot 4.6 中 hover 与 keyboard/gamepad focus 分离，按钮必须分别显示 `hover`、`pressed`、`keyboard_focus`。
+- 所有按钮均支持鼠标、触摸确认。
+- Godot 4.6 中按钮必须分别显示 `hover`、`pressed`；Web 项目不提供键盘/手柄主流程。
 - 所有可见文本使用 `tr()` 本地化 key。
 - 所有可交互热区不小于 44×44px。
 - UI 不显示评分、正确/错误穿搭、失败语气或惩罚性提示。
@@ -140,7 +140,7 @@ exit_enabled = (ui_mode == MAIN_MENU_DEFAULT or ui_mode == MAIN_MENU_COMPLETED)
 
 **输出**：按钮启用状态。
 
-**规则**：按钮隐藏或 disabled 都必须保持焦点路径合法，不让键盘/手柄焦点落到不可用按钮上。
+**规则**：按钮隐藏或 disabled 时仍须保持可见状态逻辑一致，不得误导玩家以为还能继续操作已失效入口。
 
 ### 触控热区约束
 
@@ -169,7 +169,7 @@ interactive_target_height >= 44px
 - **`context["equipped_items"]` 缺失**：晚安 UI 仍可显示通用晚安文案；不显示破损穿搭回顾，不阻塞继续。
 - **ProgressManager 未就绪**：主菜单显示安全默认天数或轻量加载状态；不得把未就绪误判为通关。
 - **Web 端退出无效**：如果 `GameState.request_transition(State.QUIT)` 在 Web 平台不能关闭窗口，显示静态告别画面或返回安全 idle 状态，不展示技术错误。
-- **键盘/手柄焦点落到隐藏按钮**：刷新 focus neighbors 或主动把焦点移到第一个可用按钮；不可用按钮不得接收确认。
+- **玩家误触到隐藏按钮**：隐藏或 disabled 的入口不得触发任何状态变化；如状态已切换，界面应同步恢复到可操作按钮。
 - **本地化文本过长**：按钮和标题自动换行或使用更宽容布局，不溢出、不遮挡主要操作。
 - **状态转换失败或被拒绝**：按钮恢复可用，并显示温和提示；不得卡在 disabled 状态。
 
@@ -245,9 +245,8 @@ interactive_target_height >= 44px
 - 主菜单和晚安 UI 都必须在 `_ready()` 中主动读取 `GameState.current_state`，不能只等待 `state_changed`。
 - 所有可见字符串必须使用 `tr()` 和本地化 key。
 - 所有按钮实际热区必须 ≥44×44px。
-- 桌面、移动、键盘、手柄路径都必须可完成主流程。
-- Godot 4.6 中 `hover` 与 `keyboard_focus` 可同时落在不同控件，UI 必须分别显示，不互相覆盖。
-- 隐藏或 disabled 的按钮不得留在键盘/手柄 focus path 中。
+- 桌面、移动路径都必须可完成主流程。
+- 按钮必须分别显示 `hover`、`pressed` 状态；不需要键盘/手柄 focus 表现。
 - 不显示评分、任务评级、穿搭评价、失败提示或红色惩罚态。
 
 ### Main Menu Layout
@@ -273,14 +272,14 @@ interactive_target_height >= 44px
 - 晚安页不显示新解锁物品列表，除非未来服装解锁系统明确接入。
 - 第 7 天晚安页不暗示第 8 天，只使用“这一周完成了”或等价温柔收束文案。
 
-### Focus Order
+### Interaction Order
 
-主菜单默认焦点：
+主菜单默认可交互顺序：
 1. `开始今天` 或通关模式的主入口
 2. `重玩入口`（仅通关模式）
 3. `退出`
 
-晚安默认焦点：
+晚安默认可交互顺序：
 1. `明天见/继续`
 
 ### UX Flag
@@ -303,12 +302,12 @@ interactive_target_height >= 44px
 12. **GIVEN** `context["equipped_items"]` 缺失，**WHEN** 晚安 UI 渲染，**THEN** 显示通用晚安画面，不阻塞继续。
 13. **GIVEN** `ProgressManager` 未就绪，**WHEN** 主菜单渲染，**THEN** 不误判为通关模式。
 14. **GIVEN** 任意可交互按钮，**WHEN** 检查实际热区，**THEN** 宽高均 ≥44px。
-15. **GIVEN** Godot 4.6 双焦点系统，**WHEN** 鼠标 hover 和键盘 focus 位于不同按钮，**THEN** 两种状态均可见且不互相覆盖。
-16. **GIVEN** 隐藏或 disabled 按钮，**WHEN** 使用键盘/手柄导航，**THEN** 焦点不会落到该按钮上。
-17. **GIVEN** 本地化文本较长，**WHEN** 主菜单或晚安页渲染，**THEN** 文本自动换行或重排，不溢出、不遮挡主按钮。
-18. **GIVEN** Web 平台 `QUIT` 无法关闭窗口，**WHEN** 玩家点击退出，**THEN** UI 显示安全告别状态或等价静态画面，不展示技术错误。
-19. **GIVEN** 通关模式启用重玩入口，**WHEN** 玩家请求重玩某天，**THEN** UI 只发出 `replay_day_requested(day)` 或等价用户意图，不直接修改当前天数。
-20. **GIVEN** UI 任意可见文案，**WHEN** 检查实现，**THEN** 使用 `tr()` 和本地化 key，不硬编码玩家可见字符串。
+15. **GIVEN** 鼠标 hover 与按钮 pressed 状态，**WHEN** 玩家在不同按钮间移动和点击，**THEN** 两种状态均可见且不互相覆盖。
+16. **GIVEN** 本地化文本较长，**WHEN** 主菜单或晚安页渲染，**THEN** 文本自动换行或重排，不溢出、不遮挡主按钮。
+17. **GIVEN** Web 平台 `QUIT` 无法关闭窗口，**WHEN** 玩家点击退出，**THEN** UI 显示安全告别状态或等价静态画面，不展示技术错误。
+18. **GIVEN** 通关模式启用重玩入口，**WHEN** 玩家请求重玩某天，**THEN** UI 只发出 `replay_day_requested(day)` 或等价用户意图，不直接修改当前天数。
+19. **GIVEN** UI 任意可见文案，**WHEN** 检查实现，**THEN** 使用 `tr()` 和本地化 key，不硬编码玩家可见字符串。
+20. **GIVEN** 桌面端与移动端常见视口尺寸，**WHEN** 页面以 1366x768、1280x720、390x844 和 360x800 渲染，**THEN** 标题、当前天数、主按钮、安全区与主视觉都不重叠、不溢出，且主按钮仍处于可见可点区域。
 
 ## Open Questions
 

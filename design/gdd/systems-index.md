@@ -19,10 +19,10 @@
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | 服装数据库 (inferred) | Gameplay | MVP | Approved | design/gdd/wardrobe-database.md | — |
 | 2 | 场景/状态管理 (inferred) | Core | MVP | Approved | design/gdd/scene-state-management.md | 服装数据库, 保存/加载, 资源加载器, 输入管理, 进度管理 |
-| 3 | 精灵分层渲染 (inferred) | Gameplay | MVP | Approved | design/gdd/sprite-layered-rendering.md | 服装数据库, 资源加载器 |
-| 4 | 保存/加载 (inferred) | Persistence | MVP | Approved | design/gdd/save-load.md | — |
+| 3 | 精灵分层渲染 (inferred) | Gameplay | MVP | In Design | design/gdd/sprite-layered-rendering.md | 服装数据库, 资源加载器 |
+| 4 | 保存/加载 (inferred) | Persistence | MVP | Designed | design/gdd/save-load.md | — |
 | 5 | 资源加载器 (inferred) | Core | MVP | Approved | design/gdd/resource-loader.md | 服装数据库, 场景/状态管理 |
-| 6 | 输入管理 (inferred) | Core | MVP | Approved | design/gdd/input-management.md | — |
+| 6 | 输入管理 (inferred) | Core | MVP | Designed | design/gdd/input-management.md | — |
 | 7 | 进度管理 (inferred) | Progression | MVP | Approved | design/gdd/progress-management.md | 保存/加载, 服装数据库 |
 | 8 | 衣橱 UI (inferred) | UI | MVP | Approved | design/gdd/wardrobe-ui.md | 输入管理, 服装数据库, 资源加载器, 进度管理 |
 | 9 | 对话 UI (inferred) | UI | MVP | Approved | design/gdd/dialogue-ui.md | 场景/状态管理, 进度管理 |
@@ -142,8 +142,8 @@ Effort: S = 1 session, M = 2-3 sessions. A "session" is one focused design conve
 | Total systems identified | 15 |
 | Design docs started | 15 |
 | Design docs reviewed | 15 |
-| Design docs approved | 15 |
-| MVP systems designed | 15/15 |
+| Design docs approved | 12 |
+| MVP systems designed | 12/15 |
 
 ---
 

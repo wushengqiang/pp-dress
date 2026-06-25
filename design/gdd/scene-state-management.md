@@ -98,7 +98,7 @@ MAIN_MENU ←──"继续（下一天）"── GOODNIGHT
 |------|---------|------|------|------|
 | `BOOT` | 游戏启动 或 ERROR 重试 | 按依赖顺序初始化 Foundation/Core 入口系统（数据库→保存/加载→进度管理→资源加载器→输入管理），全部成功→MAIN_MENU | MAIN_MENU | 全部初始化成功 |
 | | | 任一失败→ERROR | ERROR | 初始化失败 |
-| | | 若保存系统就绪、`scene_in_progress == true`、ProgressManager 已完成修复，且 `equipped_items` 字段存在并可过滤为 `Array[String]`（允许空数组作为明确空穿搭），可跳过 MAIN_MENU 直接恢复 | DAILY_SCENE | 恢复进行中的会话 |
+| | | 若保存系统就绪、`scene_in_progress == true`、ProgressManager 已完成修复，且 `equipped_items` 字段存在并可解析为 `Array[String]`（包括空数组作为明确空穿搭），可跳过 MAIN_MENU 直接恢复 | DAILY_SCENE | 恢复进行中的会话 |
 | `MAIN_MENU` | BOOT 成功、GOODNIGHT 的"继续"、或 WARDROBE 取消 | 显示标题画面 + "开始今天"按钮。`current_day` 显示在 UI 上 | WARDROBE | 玩家点击"开始今天" |
 | | | | QUIT | 玩家关闭/退出 |
 | `WARDROBE` | MAIN_MENU 的"开始今天" | 加载衣橱 UI，玩家为当天的 `current_day` 搭配服装 | MAIN_MENU | 玩家取消（穿搭确认前） |
@@ -115,7 +115,7 @@ MAIN_MENU ←──"继续（下一天）"── GOODNIGHT
 | 系统 | 方向 | 交互性质 |
 |------|------|---------|
 | 服装数据库 | 本系统依赖 | BOOT 阶段检查 `WardrobeDatabase.is_ready`；失败时读取 `load_error` 展示错误画面 |
-| 保存/加载 | 本系统依赖 | BOOT 阶段等待保存系统就绪，读取存档（含 `current_day`、`highest_day_completed`、`scene_in_progress`、`equipped_items`）。**接口要求**：保存系统须提供 `scene_in_progress: bool` 标记和已保存穿搭；GameState 只有在 ProgressManager 修复完成且 `equipped_items` 字段存在并为数组时才恢复中断会话，`[]` 表示明确空穿搭而不是无效恢复 |
+| 保存/加载 | 本系统依赖 | BOOT 阶段等待保存系统就绪，读取存档（含 `current_day`、`highest_day_completed`、`scene_in_progress`、`equipped_items`）。**接口要求**：保存系统须提供 `scene_in_progress: bool` 标记和已保存穿搭；GameState 只有在 ProgressManager 修复完成且 `equipped_items` 字段存在并可解析为数组时才恢复中断会话，`[]` 表示明确空穿搭 |
 | 资源加载器 | 本系统依赖 | BOOT 阶段检查资源加载器就绪状态；正式实现中 `skip_resource_loader = false`，资源加载器不可用时进入可恢复错误流程或安全 loading 流程 |
 | 输入管理 | 本系统依赖 | BOOT 阶段检查输入管理器就绪状态；正式实现中 `skip_input_manager = false`，输入管理不可用时不得进入可交互 WARDROBE |
 | 对话 UI | 依赖本系统 | 在新场景 `_ready()` 中调用 `GameState._on_scene_ready()` 触发 `state_changed` 信号；通过 `GameState.get_current_day()` 或 `context["current_day"]` 选择对话内容 |
@@ -295,7 +295,7 @@ GOODNIGHT → MAIN_MENU:
 - [ ] AC-20：BOOT 完成且无存档时，`GameState.get_current_day() == 1`
 - [ ] AC-21：存档中 `current_day = -1` 时，BOOT 后 `GameState.get_current_day() == 1`（由 ProgressManager 修复）
 - [ ] AC-22：存档中 `current_day = 0` 时，BOOT 后 `GameState.get_current_day() == 1`（由 ProgressManager 修复）
-- [ ] AC-22a：`scene_in_progress == true` 但 `equipped_items` 字段缺失、为 `null` 或不是可过滤的 `Array[String]` 时，BOOT 清除恢复标记并进入 MAIN_MENU，不进入 DAILY_SCENE
+- [ ] AC-22a：`scene_in_progress == true` 但 `equipped_items` 字段缺失、为 `null` 或不是可解析的 `Array[String]` 时，BOOT 清除恢复标记并进入 MAIN_MENU，不进入 DAILY_SCENE
 - [ ] AC-22b：`scene_in_progress == true` 且 `equipped_items == []` 时，BOOT 保留恢复语义并进入 DAILY_SCENE；Daily Scene 必须按明确空穿搭调用 `apply_outfit([])`，不得走默认穿搭兜底
 
 **Context**

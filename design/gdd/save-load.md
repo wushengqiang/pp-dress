@@ -145,7 +145,7 @@ GameState 不得在该流程中调用 `SaveManager.set_current_day()`；`current
 
 **进度提交失败契约**：`ProgressManager.advance_day()` 可以在内存中构造候选进度，但在 `SaveManager.save()` 成功前不得发出 `day_completed`、`items_unlocked`、`day_started`，也不得让 UI 读取到已提交的新一天/新解锁状态。保存失败时必须恢复调用前的进度快照，并通过 `SaveManager.replace_progress_fields()` 恢复 SaveManager 内的进度字段；`scene_in_progress` 不由 ProgressManager 回滚，而由 GameState 在 `advance_day() == false` 后恢复为 `true`。GameState/UI 只根据 `advance_day() == true` 进入成功路径。
 
-**BOOT 恢复契约**：`scene_in_progress == true` 只表示存在可尝试恢复的未完成会话，不足以直接跳转 DAILY_SCENE。GameState 必须先等待 `ProgressManager.progress_loaded`，使用 `ProgressManager.get_current_day()` 取得修复后的天数，并过滤 `equipped_items`（存在、已解锁、类目冲突可归一化）。若有效穿搭非空，GameState 在 `BOOT → DAILY_SCENE` 前写入 `GameState.context["current_day"]` 和 `GameState.context["equipped_items"]`；若无有效穿搭，则调用 `SaveManager.set_scene_in_progress(false)` 并立即 `SaveManager.save()` 持久化修复，再进入 MAIN_MENU，避免下次刷新反复尝试恢复同一坏状态。
+**BOOT 恢复契约**：`scene_in_progress == true` 只表示存在可尝试恢复的未完成会话，不足以直接跳转 DAILY_SCENE。GameState 必须先等待 `ProgressManager.progress_loaded`，使用 `ProgressManager.get_current_day()` 取得修复后的天数，并过滤 `equipped_items`（存在、已解锁、类目冲突可归一化）。若 `equipped_items` 字段存在且可解析为 `Array[String]`，无论过滤后结果是非空数组还是空数组，GameState 都应在 `BOOT → DAILY_SCENE` 前写入 `GameState.context["current_day"]` 和 `GameState.context["equipped_items"]`；只有当字段缺失、为 `null`、不是数组或无法解析为字符串数组时，才调用 `SaveManager.set_scene_in_progress(false)` 并立即 `SaveManager.save()` 持久化修复，再进入 MAIN_MENU，避免下次刷新反复尝试恢复同一坏状态。
 
 ### States and Transitions
 
@@ -405,7 +405,7 @@ web_remove_item(key):
 - SaveManager 不处理此逻辑——它只负责存取数据
 - 由 GameState 在 BOOT 阶段等待 ProgressManager 修复完成后检查：若 `equipped_items` 字段缺失、为 `null`、不是数组，或包含无法归一化为 `String` 的值，则视为不可恢复状态，重置为 `scene_in_progress = false`，从 MAIN_MENU 正常开始
 - 若 `equipped_items == []`，则保留为玩家明确确认的空穿搭语义，允许恢复到 DAILY_SCENE，并由 Daily Scene 调用 `apply_outfit([])`；不得改为默认穿搭，也不得仅因数组为空而清除恢复标记
-- 若数组中的 ID 经过 WardrobeDatabase/ProgressManager 过滤后变为空，但原始字段类型有效，GameState 可按明确空穿搭恢复；具体无效 ID 应记录 warning，而不是破坏玩家的会话恢复
+- 若数组中的 ID 经过 WardrobeDatabase/ProgressManager 过滤后变为空，但原始字段类型有效，GameState 仍按明确空穿搭恢复；具体无效 ID 应记录 warning，而不是破坏玩家的会话恢复
 - 此逻辑详见 `design/gdd/scene-state-management.md` 的 Edge Cases 部分和 `docs/architecture/adr-0004-scene-transition-and-state-machine-contract.md`
 
 ### EC-6: 新游戏/重置流程
